@@ -1,0 +1,145 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  width: 100%;
+  font-family: "Rubik", sans-serif;
+  background: #f5f5f5;
+  position: relative;
+}
+
+h3 {
+  @apply text-2xl my-4 text-dark-60;
+}
+
+h2 {
+  @apply text-odt-primary uppercase;
+}
+
+h2.bordered {
+  @apply text-dark-100 uppercase pl-2 border-l-4 border-primary-100;
+}
+
+.pointer {
+  @apply cursor-pointer transition-all select-none;
+}
+
+.pointer:hover {
+  @apply opacity-70;
+}
+
+.middle {
+  @apply flex items-center justify-center;
+}
+
+.icon-button {
+  @apply w-10 h-10 middle pointer;
+}
+
+.stroke {
+  -webkit-text-stroke-width: 2px;
+  -webkit-text-stroke-color: white;
+}
+
+.overlay {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, #000000 100%);
+}
+
+.link-button {
+  @apply pointer middle bg-secondary-10 px-5 py-2 rounded-full font-medium text-odt-primary;
+}
+
+.link:hover {
+  @apply underline;
+}
+
+input,
+button,
+a.button,
+textarea {
+  @apply p-3 px-4 w-full rounded-lg !important;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  @apply w-auto mr-2;
+}
+
+input,
+textarea {
+  @apply text-dark-100 border;
+}
+
+button,
+button[type="submit"],
+a.button {
+  @apply text-white bg-odt-primary pointer flex items-center justify-center;
+}
+
+button.gray,
+a.button.gray {
+  @apply bg-dark-40;
+}
+
+form label {
+  @apply text-dark-100;
+}
+
+.form-control {
+  @apply text-left;
+}
+
+.form-control label {
+  @apply text-sm;
+}
+/* 
+.form-control:has(.error), .form-control:has(.error) label {
+    @apply text-primary-100;
+}
+
+.form-control:has(.error) input{
+    @apply border-primary-100 border-2;
+}
+
+.error::before{
+    content: "*";
+}
+
+.error{
+    @apply text-primary-100 px-4 text-left text-sm;
+} */
+
+.error {
+  @apply text-primary-100;
+}
+
+.rdp-day_selected,
+.react-toggle--checked .react-toggle-track {
+  @apply bg-odt-primary !important;
+}
+
+.react-toggle--checked .react-toggle-thumb {
+  @apply border-odt-primary !important;
+}
+
+.cursor {
+  @apply cursor-pointer;
+}
+
+.button.secondary,
+button.secondary {
+  @apply bg-odt-primary text-white;
+  box-shadow: 0px 5px 15px rgba(35, 121, 190, 0.5);
+}
+
+.swal2-cancel {
+  @apply bg-dark-40 mt-5;
+}
+
+table.grade td,
+th {
+  @apply p-2 border text-xs;
+}
