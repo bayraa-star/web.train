@@ -5,7 +5,7 @@ export const DEBUG = process.env.NODE_ENV === "development";
 
 export const API_ROOT = DEBUG
   ? "http://localhost:5001"
-  : "http://103.9.90.140:5001";
+  : "http://192.168.1.195:5001";
 // export const API_ROOT = "http://103.9.90.140:5001";
 export const VERSION = packageJson.version;
 export const YEAR = () => {
