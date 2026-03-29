@@ -23,6 +23,7 @@ The current workflow is:
   - `Dashboard`
   - `Users`
   - `Uploads & Jobs`
+  - `Dataset`
 - Batch-based work management with `jobs`
 - Large-queue pagination for labeling and examining
 - Examiner approval/decline loop
@@ -256,6 +257,11 @@ The admin workspace is divided into:
   - assign images to a labeler
   - edit job
   - delete job
+- `Dataset`
+  - start server-side dataset export
+  - choose `labeled only` or `all dataset`
+  - poll export progress
+  - download the finished zip
 
 ### Labeler Workspace
 
@@ -366,6 +372,15 @@ These remain available, but the current OCR workflow uses free-text plate entry 
 - `GET /file/progress`
 - `GET /file/progress?jobId=<jobId>`
 
+### Dataset Export
+
+- `POST /dataset/export`
+  - admin-only
+  - body: `{ "scope": "approved" }` or `{ "scope": "all" }`
+- `GET /dataset/export/:id`
+  - admin-only
+  - returns export progress, status, and `downloadPath` when finished
+
 ### Health
 
 - `GET /test`
@@ -401,6 +416,7 @@ The collection covers:
 - upload flow
 - labeler queue flow
 - examiner approve/decline flow
+- dataset export flow
 
 ## Deletion Rules
 

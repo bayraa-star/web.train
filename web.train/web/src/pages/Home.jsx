@@ -9,6 +9,7 @@ import UserCreateSection from "./components/UserCreateSection";
 import UserManagementSection from "./components/UserManagementSection";
 import JobManagementSection from "./components/JobManagementSection";
 import TrashSection from "./components/TrashSection";
+import DatasetDownloadSection from "./components/DatasetDownloadSection";
 
 const Home = () => {
   const { user, logout } = useApp();
@@ -30,6 +31,10 @@ const Home = () => {
     {
       label: "Trash",
       to: "/home/trash",
+    },
+    {
+      label: "Dataset",
+      to: "/home/dataset",
     },
   ];
 
@@ -111,6 +116,7 @@ const Home = () => {
               path="trash"
               element={<TrashSection refreshKey={queueReset} />}
             />
+            <Route path="dataset" element={<DatasetDownloadSection />} />
             <Route path="*" element={<Navigate to="dashboard" replace />} />
           </Routes>
         </>

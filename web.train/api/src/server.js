@@ -21,7 +21,14 @@ import {
   UPLOADS_ROOT,
 } from "./consts";
 import { log } from "./utils";
-import { UserRouter, LogRouter, FileRouter, RootRouter, JobRouter } from "./routes";
+import {
+  UserRouter,
+  LogRouter,
+  FileRouter,
+  RootRouter,
+  JobRouter,
+  DatasetRouter,
+} from "./routes";
 import agenda from "./utils/agenda";
 
 const app = express();
@@ -73,6 +80,7 @@ app.use("/user", UserRouter);
 app.use("/file", FileRouter);
 app.use("/root", RootRouter);
 app.use("/job", JobRouter);
+app.use("/dataset", DatasetRouter);
 
 app.use("/test", (req, res) => {
   let total = 0;
