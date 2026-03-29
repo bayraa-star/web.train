@@ -55,6 +55,22 @@ const toPublicExportPath = (fileName) => {
   return path.posix.join(PUBLIC_UPLOADS_DIR, "exports", fileName);
 };
 
+const toAbsoluteExportPath = (fileName = "") => {
+  const normalizedFileName = path.basename(fileName.toString().trim());
+
+  if (!normalizedFileName || normalizedFileName !== fileName) {
+    throw new Exception("Invalid export file");
+  }
+
+  return ensurePathInsideUploadsRoot(path.join(exportsRoot, normalizedFileName));
+};
+
+const getScopeFromFileName = (fileName = "") => {
+  const match = fileName.match(/^dataset-(approved|all)-/);
+
+  return match?.[1] || "";
+};
+
 const getDatasetScope = (scope) => {
   if (scope === "approved") {
     return {
@@ -321,6 +337,60 @@ export const startDatasetExport = async (request, response) => {
   return response.json(exportJob);
 };
 
+export const listDatasetExports = async (request, response) => {
+  mkdirp.sync(exportsRoot);
+
+  const fileNames = fs.existsSync(exportsRoot)
+    ? fs
+        .readdirSync(exportsRoot, { withFileTypes: true })
+        .filter((entry) => entry.isFile() && entry.name.endsWith(".zip"))
+        .map((entry) => entry.name)
+    : [];
+
+  const exportJobs = await DatasetExport.find({
+    fileName: {
+      $in: fileNames,
+    },
+  })
+    .select("_id scope status progress message downloadPath fileName created finishedAt")
+    .lean();
+
+  const exportByFileName = exportJobs.reduce((accumulator, item) => {
+    accumulator[item.fileName] = item;
+    return accumulator;
+  }, {});
+
+  const items = fileNames
+    .map((fileName) => {
+      const absolutePath = toAbsoluteExportPath(fileName);
+      const stats = fs.statSync(absolutePath);
+      const exportJob = exportByFileName[fileName];
+
+      return {
+        _id: exportJob?._id || null,
+        fileName,
+        scope: exportJob?.scope || getScopeFromFileName(fileName) || "approved",
+        status: exportJob?.status || "finished",
+        progress: exportJob?.progress || 100,
+        message: exportJob?.message || "Dataset zip is ready.",
+        created: exportJob?.created || stats.birthtime || stats.mtime,
+        finishedAt: exportJob?.finishedAt || stats.mtime,
+        size: stats.size,
+        downloadPath: exportJob?.downloadPath || toPublicExportPath(fileName),
+      };
+    })
+    .sort((left, right) => {
+      return (
+        new Date(right.finishedAt || right.created || 0).getTime() -
+        new Date(left.finishedAt || left.created || 0).getTime()
+      );
+    });
+
+  return response.json({
+    items,
+  });
+};
+
 export const getDatasetExportStatus = async (request, response) => {
   const exportJob = await DatasetExport.findById(request.params.id).lean();
 
@@ -329,4 +399,25 @@ export const getDatasetExportStatus = async (request, response) => {
   }
 
   return response.json(exportJob);
+};
+
+export const deleteDatasetExport = async (request, response) => {
+  const fileName = path.basename(request.params.fileName || "");
+
+  if (!fileName || fileName !== request.params.fileName || !fileName.endsWith(".zip")) {
+    throw new Exception("Invalid export file");
+  }
+
+  const absolutePath = toAbsoluteExportPath(fileName);
+
+  if (!fs.existsSync(absolutePath)) {
+    throw new Exception("Dataset export file not found");
+  }
+
+  fs.unlinkSync(absolutePath);
+  await DatasetExport.deleteMany({ fileName });
+
+  return response.json({
+    deleted: fileName,
+  });
 };
