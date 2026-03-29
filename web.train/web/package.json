@@ -59,7 +59,6 @@
     "recharts": "^2.5.0",
     "sweetalert2": "^11.22.0",
     "sweetalert2-react-content": "^5.0.7",
-    "xlsx": "^0.18.5",
     "yup": "^1.0.2"
   },
   "devDependencies": {
