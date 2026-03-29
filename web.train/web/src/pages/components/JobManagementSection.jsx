@@ -115,7 +115,7 @@ const JobManagementSection = ({ refreshKey, onChanged }) => {
 
   const removeJob = async (item) => {
     const confirmed = await confirmPopup(
-      `Delete job ${item.name}? This cannot be undone.`
+      `Delete job ${item.name} and all related uploaded images? This cannot be undone.`
     );
 
     if (!confirmed?.isConfirmed) {
@@ -126,7 +126,7 @@ const JobManagementSection = ({ refreshKey, onChanged }) => {
     setError("");
 
     try {
-      await mainApi({
+      const response = await mainApi({
         url: `/job/${item._id}`,
         method: "DELETE",
       });
@@ -137,7 +137,10 @@ const JobManagementSection = ({ refreshKey, onChanged }) => {
 
       await fetchJobs({ silent: true });
       onChanged && onChanged();
-      await successAlert("action.success", "Job deleted successfully.");
+      await successAlert(
+        "action.success",
+        `Job deleted successfully. Removed ${response?.data?.filesDeleted || 0} related files.`
+      );
     } catch (err) {
       setError(err);
       await errorAlert("action.error", err);
@@ -150,7 +153,7 @@ const JobManagementSection = ({ refreshKey, onChanged }) => {
     <div className="mt-8 p-6 bg-white shadow border rounded">
       <div className="text-lg font-semibold">Manage Jobs</div>
       <div className="text-sm text-gray-500 mt-1">
-        Review and rename existing upload jobs.
+        Review, rename, or permanently delete upload jobs and their related files.
       </div>
       {error ? <div className="mt-2 text-sm text-red-500">{error}</div> : null}
 
