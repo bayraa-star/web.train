@@ -176,6 +176,8 @@ const fileProcessor = async (file, request) => {
     approvedAt: null,
     declinedBy: null,
     declinedAt: null,
+    deletedBy: null,
+    deletedAt: null,
     ...upload,
   }).save();
 };
@@ -370,6 +372,7 @@ export const tableFiles = async (request, response) => {
             "labeledBy",
             "approvedBy",
             "declinedBy",
+            "deletedBy",
           ]),
       }
     )
@@ -401,6 +404,7 @@ export const progressFiles = async (request, response) => {
     {
       $match: {
         assignedTo: { $ne: null },
+        status: { $ne: "deleted" },
         ...(selectedJob ? { job: selectedJob._id } : {}),
       },
     },
@@ -541,6 +545,8 @@ export const labelFile = async (request, response) => {
   file.approvedAt = null;
   file.declinedBy = null;
   file.declinedAt = null;
+  file.deletedBy = null;
+  file.deletedAt = null;
   file.modified = new Date();
   file.modifiedby = request.user?.id;
 
@@ -557,6 +563,7 @@ export const labelFile = async (request, response) => {
         "labeledBy",
         "approvedBy",
         "declinedBy",
+        "deletedBy",
       ])
       .lean()
   );
@@ -584,6 +591,8 @@ export const approveFile = async (request, response) => {
   file.approvedAt = new Date();
   file.declinedBy = null;
   file.declinedAt = null;
+  file.deletedBy = null;
+  file.deletedAt = null;
   file.modified = new Date();
   file.modifiedby = request.user?.id;
 
@@ -600,6 +609,7 @@ export const approveFile = async (request, response) => {
         "labeledBy",
         "approvedBy",
         "declinedBy",
+        "deletedBy",
       ])
       .lean()
   );
@@ -624,6 +634,8 @@ export const declineFile = async (request, response) => {
   file.approvedAt = null;
   file.declinedBy = request.user?.id;
   file.declinedAt = new Date();
+  file.deletedBy = null;
+  file.deletedAt = null;
   file.modified = new Date();
   file.modifiedby = request.user?.id;
 
@@ -640,6 +652,39 @@ export const declineFile = async (request, response) => {
         "labeledBy",
         "approvedBy",
         "declinedBy",
+        "deletedBy",
+      ])
+      .lean()
+  );
+};
+
+export const trashFile = async (request, response) => {
+  const file = await getAccessibleFileById(request.params.id, request.user);
+
+  if (!["uploaded", "labeled"].includes(file.status)) {
+    throw new Exception("Only uploaded or submitted images can be moved to trash");
+  }
+
+  file.status = "deleted";
+  file.deletedBy = request.user?.id;
+  file.deletedAt = new Date();
+  file.modified = new Date();
+  file.modifiedby = request.user?.id;
+
+  await file.save();
+  removeLabelArtifacts(file.id);
+
+  return response.json(
+    await File.findById(file._id)
+      .populate([
+        "assignedTo",
+        "job",
+        "root",
+        "createdby",
+        "labeledBy",
+        "approvedBy",
+        "declinedBy",
+        "deletedBy",
       ])
       .lean()
   );

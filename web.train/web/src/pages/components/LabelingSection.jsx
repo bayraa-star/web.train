@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { mainApi } from "../../providers/api";
 import { getAbsolutePath } from "../../providers/format";
-import { errorAlert } from "../../providers/alert";
+import { confirmPopup, errorAlert, successAlert } from "../../providers/alert";
 import QueuePagination from "./QueuePagination";
 
 const DEFAULT_PAGE_SIZE = 24;
@@ -69,6 +69,7 @@ const LabelingSection = ({ refreshKey }) => {
   const [loading, setLoading] = useState(false);
   const [draftLabels, setDraftLabels] = useState({});
   const [savingId, setSavingId] = useState("");
+  const [deletingId, setDeletingId] = useState("");
   const [error, setError] = useState("");
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
@@ -269,6 +270,39 @@ const LabelingSection = ({ refreshKey }) => {
     }
   };
 
+  const trashItem = async (itemId) => {
+    const confirmed = await confirmPopup(
+      "Move this image to trash? Admin can review deleted images later."
+    );
+
+    if (!confirmed?.isConfirmed) {
+      return;
+    }
+
+    setDeletingId(itemId);
+
+    try {
+      const currentIndex = items.findIndex((item) => item._id === itemId);
+      pendingFocusId.current =
+        items[currentIndex + 1]?._id || items[currentIndex - 1]?._id || "";
+
+      await mainApi({
+        url: `/file/trash/${itemId}`,
+        method: "PUT",
+      });
+
+      await fetchItems({ silent: true, background: true });
+      setError("");
+      await successAlert("action.success", "Image moved to trash.");
+    } catch (err) {
+      pendingFocusId.current = itemId;
+      setError(err);
+      await errorAlert("action.error", err);
+    } finally {
+      setDeletingId("");
+    }
+  };
+
   return (
     <div className="mt-8 p-6 bg-white shadow border rounded">
       <div className="text-lg font-semibold">Labeling Queue</div>
@@ -440,22 +474,36 @@ const LabelingSection = ({ refreshKey }) => {
                     />
 
                     {isEditable ? (
-                      <button
-                        type="button"
-                        onClick={() => saveLabel(item._id)}
-                        disabled={!draftLabels[item._id]?.trim() || savingId === item._id}
-                        className={`border px-4 py-2 rounded disabled:opacity-50 ${
-                          isDeclined ? "!bg-red-600 !border-red-600 text-white" : ""
-                        }`}
-                      >
-                        {savingId === item._id
-                          ? "Submitting..."
-                          : isDeclined
-                            ? "Resubmit Label"
-                            : isWaitingForReview
-                              ? "Update Submitted Label"
-                            : "Submit Label"}
-                      </button>
+                      <div className="flex flex-wrap gap-3">
+                        <button
+                          type="button"
+                          onClick={() => saveLabel(item._id)}
+                          disabled={
+                            !draftLabels[item._id]?.trim() ||
+                            savingId === item._id ||
+                            deletingId === item._id
+                          }
+                          className={`!w-auto border px-4 py-2 rounded inline-flex disabled:opacity-50 ${
+                            isDeclined ? "!bg-red-600 !border-red-600 text-white" : ""
+                          }`}
+                        >
+                          {savingId === item._id
+                            ? "Submitting..."
+                            : isDeclined
+                              ? "Resubmit Label"
+                              : isWaitingForReview
+                                ? "Update Submitted Label"
+                                : "Submit Label"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => trashItem(item._id)}
+                          disabled={savingId === item._id || deletingId === item._id}
+                          className="!w-auto border px-4 py-2 rounded inline-flex bg-red-600 text-white disabled:opacity-50"
+                        >
+                          {deletingId === item._id ? "Moving..." : "Move to Trash"}
+                        </button>
+                      </div>
                     ) : (
                       <div className="text-xs text-gray-500">
                         {item?.status === "labeled"

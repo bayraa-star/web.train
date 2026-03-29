@@ -8,6 +8,7 @@ import AdminProgressSection from "./components/AdminProgressSection";
 import UserCreateSection from "./components/UserCreateSection";
 import UserManagementSection from "./components/UserManagementSection";
 import JobManagementSection from "./components/JobManagementSection";
+import TrashSection from "./components/TrashSection";
 
 const Home = () => {
   const { user, logout } = useApp();
@@ -25,6 +26,10 @@ const Home = () => {
     {
       label: "Uploads & Jobs",
       to: "/home/uploads",
+    },
+    {
+      label: "Trash",
+      to: "/home/trash",
     },
   ];
 
@@ -101,6 +106,10 @@ const Home = () => {
                   />
                 </>
               }
+            />
+            <Route
+              path="trash"
+              element={<TrashSection refreshKey={queueReset} />}
             />
             <Route path="*" element={<Navigate to="dashboard" replace />} />
           </Routes>

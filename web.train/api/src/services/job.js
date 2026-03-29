@@ -11,6 +11,7 @@ const getLabelerAssignedJobIds = async (userId) => {
   return File.distinct("job", {
     assignedTo: userId,
     job: { $ne: null },
+    status: { $ne: "deleted" },
   });
 };
 

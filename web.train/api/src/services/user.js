@@ -131,6 +131,7 @@ const deleteUserById = async (request) => {
       { labeledBy: id },
       { approvedBy: id },
       { declinedBy: id },
+      { deletedBy: id },
     ],
   }).lean();
 

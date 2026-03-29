@@ -32,10 +32,16 @@ const Schema = new mongoose.Schema(
       index: true,
     },
     declinedAt: { type: Date, index: true },
+    deletedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "user",
+      index: true,
+    },
+    deletedAt: { type: Date, index: true },
     status: {
       type: String,
       index: true,
-      enum: ["uploaded", "labeled", "approved"],
+      enum: ["uploaded", "labeled", "approved", "deleted"],
       default: "uploaded",
     },
     id: { type: String, index: true, trim: true },
