@@ -1,19 +1,23 @@
 import PDFDocument from "pdfkit";
 import fs from "fs";
+import path from "path";
 import { mkdirp } from "mkdirp";
 import { format } from "date-fns";
 import axios from "axios";
-import { PHOTO_ROOT } from "../consts";
+import { PHOTO_ROOT, UPLOADS_ROOT } from "../consts";
 import { verify } from "crypto";
+
+const generatedRoot = path.join(UPLOADS_ROOT, "generated");
+
 const checkDir = () => {
-  const dir = "uploads/generated/" + format(new Date(), "yyyyMMdd");
+  const dir = path.join(generatedRoot, format(new Date(), "yyyyMMdd"));
   mkdirp(dir);
 
   return dir;
 };
 
 const downloadDir = (_id) => {
-  const dir = "uploads/generated/" + format(new Date(), "yyyyMMdd") + "/" + _id;
+  const dir = path.join(generatedRoot, format(new Date(), "yyyyMMdd"), _id);
   mkdirp.sync(dir);
 
   return dir;

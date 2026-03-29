@@ -1,6 +1,17 @@
 require("dotenv").config({
   path: "./.env",
 });
+const path = require("path");
+
+const resolveUploadsRoot = () => {
+  const configuredRoot = process.env.UPLOADS_ROOT;
+
+  if (!configuredRoot) {
+    return path.resolve("uploads");
+  }
+
+  return path.resolve(configuredRoot);
+};
 
 module.exports = {
   DB: process.env.DB,
@@ -23,6 +34,7 @@ module.exports = {
   // XYP: "http://103.9.90.140:80/xyp/invoker.php",
   JWT: { secret: process.env.SECRET_KEY, algorithms: ["HS256"] },
   SECRET: process.env.SECRET_KEY,
+  UPLOADS_ROOT: resolveUploadsRoot(),
   BASIC_AUTH: {
     username: process.env.BASIC_AUTH_USERNAME,
     password: process.env.BASIC_AUTH_PASSWORD,

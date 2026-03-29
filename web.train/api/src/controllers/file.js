@@ -9,13 +9,15 @@ import { Types } from "mongoose";
 import File from "../models/file";
 import User from "../models/user";
 import Job from "../models/job";
+import { UPLOADS_ROOT } from "../consts";
 import { table } from "../utils/db";
 import { Exception, Unauthorized } from "../utils";
 
 const isAdmin = (user) => user?.role === "admin";
 const isExaminer = (user) => user?.role === "examiner";
-const uploadsRoot = path.resolve("uploads");
-const taskUploadsTempRoot = path.join("uploads", "tasks", "_tmp");
+const PUBLIC_UPLOADS_DIR = "uploads";
+const uploadsRoot = path.resolve(UPLOADS_ROOT);
+const taskUploadsTempRoot = path.join(uploadsRoot, "tasks", "_tmp");
 const MAX_DATE_SENTINEL = new Date("9999-12-31T23:59:59.999Z");
 
 const getFileType = (mimetype = "") => {
@@ -40,6 +42,41 @@ const ensureDirectory = (directory) => {
   return directory;
 };
 
+const normalizePublicUploadId = (value = "") => {
+  return value.toString().replace(/\\/g, "/").replace(/^\/+/, "");
+};
+
+const ensurePathInsideUploadsRoot = (filePath) => {
+  const resolvedPath = path.resolve(filePath);
+
+  if (
+    resolvedPath !== uploadsRoot &&
+    !resolvedPath.startsWith(`${uploadsRoot}${path.sep}`)
+  ) {
+    throw new Unauthorized("Invalid upload path");
+  }
+
+  return resolvedPath;
+};
+
+const toPublicUploadId = (filePath) => {
+  const resolvedPath = ensurePathInsideUploadsRoot(filePath);
+  const relativePath = path.relative(uploadsRoot, resolvedPath).split(path.sep).join("/");
+
+  return path.posix.join(PUBLIC_UPLOADS_DIR, relativePath);
+};
+
+const toAbsoluteUploadPath = (uploadId = "") => {
+  const normalizedUploadId = normalizePublicUploadId(uploadId);
+  const relativePath = normalizedUploadId.startsWith(`${PUBLIC_UPLOADS_DIR}/`)
+    ? normalizedUploadId.slice(PUBLIC_UPLOADS_DIR.length + 1)
+    : normalizedUploadId === PUBLIC_UPLOADS_DIR
+      ? ""
+      : normalizedUploadId;
+
+  return ensurePathInsideUploadsRoot(path.join(uploadsRoot, relativePath));
+};
+
 const createDiskStorage = (getDestination) =>
   multer.diskStorage({
     destination: (request, file, cb) => {
@@ -60,7 +97,7 @@ const serializeUpload = (file) => {
   const storedName = path.basename(filePath);
 
   return {
-    id: filePath,
+    id: toPublicUploadId(filePath),
     name: storedName,
     originalName,
     mime: mimetype,
@@ -85,7 +122,7 @@ const getGenericUploadDirectory = (rootId) => {
     throw new Exception("rootId утга оруулах шаардлагатай");
   }
 
-  return path.join("uploads", directory);
+  return path.join(uploadsRoot, directory);
 };
 
 const getUploadDirectory = (assignedTo) => {
@@ -93,7 +130,7 @@ const getUploadDirectory = (assignedTo) => {
     throw new Exception("Labeler is required");
   }
 
-  return path.join("uploads", "tasks", assignedTo.toString());
+  return path.join(uploadsRoot, "tasks", assignedTo.toString());
 };
 
 const attachAssignedLabeler = async (request) => {
@@ -186,9 +223,10 @@ const getFileNameWithoutExtension = (filePath = "") => {
   return path.parse(filePath).name;
 };
 
-const syncLabelArtifacts = (filePath, label) => {
-  const folderPath = path.dirname(filePath);
-  const fileName = getFileNameWithoutExtension(filePath);
+const syncLabelArtifacts = (fileId, label) => {
+  const absoluteFilePath = toAbsoluteUploadPath(fileId);
+  const folderPath = path.dirname(absoluteFilePath);
+  const fileName = getFileNameWithoutExtension(absoluteFilePath);
   const txtPath = path.join(folderPath, `${fileName}.txt`);
   const csvPath = path.join(folderPath, "labels.csv");
 
@@ -207,9 +245,10 @@ const syncLabelArtifacts = (filePath, label) => {
   fs.writeFileSync(csvPath, `${rows.join("\n")}\n`);
 };
 
-const removeLabelArtifacts = (filePath) => {
-  const folderPath = path.dirname(filePath);
-  const fileName = getFileNameWithoutExtension(filePath);
+const removeLabelArtifacts = (fileId) => {
+  const absoluteFilePath = toAbsoluteUploadPath(fileId);
+  const folderPath = path.dirname(absoluteFilePath);
+  const fileName = getFileNameWithoutExtension(absoluteFilePath);
   const txtPath = path.join(folderPath, `${fileName}.txt`);
   const csvPath = path.join(folderPath, "labels.csv");
 
@@ -263,20 +302,13 @@ const moveTaskFileToAssignedDirectory = (file, assignedTo) => {
 
 const resolveWithinBaseDirectory = (filePath, baseDirectory) => {
   const resolvedBaseDirectory = path.resolve(baseDirectory);
-  const resolvedPath = path.resolve(filePath);
+  const resolvedPath = toAbsoluteUploadPath(filePath);
 
   if (
     resolvedPath !== resolvedBaseDirectory &&
     !resolvedPath.startsWith(`${resolvedBaseDirectory}${path.sep}`)
   ) {
     throw new Unauthorized("Invalid file path");
-  }
-
-  if (
-    resolvedPath !== uploadsRoot &&
-    !resolvedPath.startsWith(`${uploadsRoot}${path.sep}`)
-  ) {
-    throw new Unauthorized("Invalid upload path");
   }
 
   return resolvedPath;
@@ -694,7 +726,7 @@ export const deleteFile = async (request, response) => {
   const file = await getAccessibleFileById(request.params.id, request.user);
 
   try {
-    fs.unlinkSync(file.id);
+    fs.unlinkSync(toAbsoluteUploadPath(file.id));
   } catch {}
 
   removeLabelArtifacts(file.id);

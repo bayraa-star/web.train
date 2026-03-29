@@ -18,6 +18,7 @@ import {
   JWT,
   DB,
   SECRET,
+  UPLOADS_ROOT,
 } from "./consts";
 import { log } from "./utils";
 import { UserRouter, LogRouter, FileRouter, RootRouter, JobRouter } from "./routes";
@@ -54,7 +55,7 @@ app.use(
 );
 
 // STATIC
-app.use("/uploads", express.static("uploads"));
+app.use("/uploads", express.static(UPLOADS_ROOT));
 app.use("/static", express.static("static"));
 // BasicAuthService
 // app.use(

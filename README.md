@@ -142,12 +142,14 @@ DB=mongodb://localhost:27017/your_database
 SECRET_KEY=replace-with-jwt-secret
 BASIC_AUTH_USERNAME=replace-with-basic-auth-username
 BASIC_AUTH_PASSWORD=replace-with-basic-auth-password
+UPLOADS_ROOT=/media/web-train/uploads
 ```
 
 Notes:
 
 - `SECRET_KEY` is used for JWT signing and verification
 - `BASIC_AUTH_USERNAME` and `BASIC_AUTH_PASSWORD` are used only for `POST /user`
+- `UPLOADS_ROOT` is the absolute filesystem path where uploaded images and generated label files are stored
 - JWT expiry is currently `12h`
 
 ## Default Ports
@@ -277,17 +279,18 @@ The admin workspace is divided into:
 
 Uploaded task images are stored under:
 
-- `web.train/api/uploads/tasks/<labelerId>/`
+- `<UPLOADS_ROOT>/tasks/<labelerId>/`
 
 Generic file uploads can also be stored under:
 
-- `web.train/api/uploads/<rootId>/`
+- `<UPLOADS_ROOT>/<rootId>/`
 
 Behavior:
 
 - uploaded task image filenames are replaced with generated UUID filenames
 - original uploaded name is stored separately as `originalName`
 - this prevents collisions when source files share the same name
+- public URLs still stay under `/uploads/...` even when the real files live on another disk such as `/media`
 
 Git ignore:
 
@@ -305,9 +308,9 @@ For each approved image:
 Example:
 
 ```text
-uploads/tasks/<labelerId>/123e4567-e89b-12d3-a456-426614174000.png
-uploads/tasks/<labelerId>/123e4567-e89b-12d3-a456-426614174000.txt
-uploads/tasks/<labelerId>/labels.csv
+<UPLOADS_ROOT>/tasks/<labelerId>/123e4567-e89b-12d3-a456-426614174000.png
+<UPLOADS_ROOT>/tasks/<labelerId>/123e4567-e89b-12d3-a456-426614174000.txt
+<UPLOADS_ROOT>/tasks/<labelerId>/labels.csv
 ```
 
 `labels.csv` format:
@@ -426,16 +429,17 @@ Job deletion is blocked when files are linked to that job.
 ## Recommended Setup Order
 
 1. Configure `web.train/api/.env`
-2. Install dependencies in `api` and `web`
-3. Start MongoDB
-4. Start the API
-5. Start the frontend
-6. Log in as admin
-7. Create labeler and examiner users
-8. Create a job
-9. Upload images and assign them to a labeler
-10. Label as labeler
-11. Review as examiner
+2. If you want uploads on a larger disk, set `UPLOADS_ROOT` to a directory on `/media` and move existing upload files there before restarting the API
+3. Install dependencies in `api` and `web`
+4. Start MongoDB
+5. Start the API
+6. Start the frontend
+7. Log in as admin
+8. Create labeler and examiner users
+9. Create a job
+10. Upload images and assign them to a labeler
+11. Label as labeler
+12. Review as examiner
 
 ## Verification
 
