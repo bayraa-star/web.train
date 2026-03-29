@@ -5,10 +5,12 @@ import { errorAlert } from "../../providers/alert";
 import QueuePagination from "./QueuePagination";
 
 const DEFAULT_PAGE_SIZE = 24;
+const ALL_JOBS_VALUE = "__all_jobs__";
+const QUEUE_REFRESH_MS = 5000;
 
 const ExaminerSection = ({ refreshKey }) => {
   const [jobs, setJobs] = useState([]);
-  const [selectedJobId, setSelectedJobId] = useState("");
+  const [selectedJobId, setSelectedJobId] = useState(ALL_JOBS_VALUE);
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -52,7 +54,9 @@ const ExaminerSection = ({ refreshKey }) => {
         data: {
           find: {
             status: "labeled",
-            ...(selectedJobId ? { job: selectedJobId } : {}),
+            ...(selectedJobId && selectedJobId !== ALL_JOBS_VALUE
+              ? { job: selectedJobId }
+              : {}),
           },
           offset: nextPage,
           limit: nextPageSize,
@@ -120,11 +124,11 @@ const ExaminerSection = ({ refreshKey }) => {
             return previous;
           }
 
-          return nextJobs?.[0]?._id || "";
+          return ALL_JOBS_VALUE;
         });
       } catch (err) {
         setJobs([]);
-        setSelectedJobId("");
+        setSelectedJobId(ALL_JOBS_VALUE);
         setError(err);
       }
     };
@@ -138,7 +142,7 @@ const ExaminerSection = ({ refreshKey }) => {
 
     const intervalId = window.setInterval(() => {
       fetchItems({ silent: true, background: true });
-    }, 5000);
+    }, QUEUE_REFRESH_MS);
 
     return () => {
       window.clearInterval(intervalId);
@@ -245,7 +249,7 @@ const ExaminerSection = ({ refreshKey }) => {
           }}
           className="border rounded px-3 py-2"
         >
-          <option value="">All Jobs</option>
+          <option value={ALL_JOBS_VALUE}>All Jobs</option>
           {jobs.map((job) => (
             <option key={job._id} value={job._id}>
               {job.name}

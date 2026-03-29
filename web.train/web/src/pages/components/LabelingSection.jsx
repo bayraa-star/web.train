@@ -5,6 +5,9 @@ import { confirmPopup, errorAlert, successAlert } from "../../providers/alert";
 import QueuePagination from "./QueuePagination";
 
 const DEFAULT_PAGE_SIZE = 24;
+const ALL_JOBS_VALUE = "__all_jobs__";
+const JOBS_REFRESH_MS = 30000;
+const QUEUE_REFRESH_MS = 5000;
 const STATUS_OPTIONS = [
   {
     value: "uploaded",
@@ -62,7 +65,7 @@ const formatDateTime = (value) => {
 
 const LabelingSection = ({ refreshKey }) => {
   const [jobs, setJobs] = useState([]);
-  const [selectedJobId, setSelectedJobId] = useState("");
+  const [selectedJobId, setSelectedJobId] = useState(ALL_JOBS_VALUE);
   const [statusFilter, setStatusFilter] = useState("uploaded");
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
@@ -111,11 +114,11 @@ const LabelingSection = ({ refreshKey }) => {
           return previous;
         }
 
-        return nextJobs?.[0]?._id || "";
+        return ALL_JOBS_VALUE;
       });
     } catch (err) {
       setJobs([]);
-      setSelectedJobId("");
+      setSelectedJobId(ALL_JOBS_VALUE);
       setError(err);
     }
   };
@@ -141,7 +144,9 @@ const LabelingSection = ({ refreshKey }) => {
         data: {
           find: {
             status: statusFilter,
-            ...(selectedJobId ? { job: selectedJobId } : {}),
+            ...(selectedJobId && selectedJobId !== ALL_JOBS_VALUE
+              ? { job: selectedJobId }
+              : {}),
           },
           offset: nextPage,
           limit: nextPageSize,
@@ -190,7 +195,7 @@ const LabelingSection = ({ refreshKey }) => {
 
     const intervalId = window.setInterval(() => {
       fetchJobs();
-    }, 5000);
+    }, JOBS_REFRESH_MS);
 
     return () => {
       window.clearInterval(intervalId);
@@ -203,7 +208,7 @@ const LabelingSection = ({ refreshKey }) => {
 
     const intervalId = window.setInterval(() => {
       fetchItems({ silent: true, background: true });
-    }, 5000);
+    }, QUEUE_REFRESH_MS);
 
     return () => {
       window.clearInterval(intervalId);
@@ -322,7 +327,7 @@ const LabelingSection = ({ refreshKey }) => {
             }}
             className="border rounded px-3 py-2"
           >
-            <option value="">All Assigned Jobs</option>
+            <option value={ALL_JOBS_VALUE}>All Assigned Jobs</option>
             {jobs.map((job) => (
               <option key={job._id} value={job._id}>
                 {job.name}
