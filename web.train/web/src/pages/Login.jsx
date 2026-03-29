@@ -1,33 +1,28 @@
-import { useTranslation } from "react-i18next";
 import { useApp } from "../providers/app";
 import Swal from "sweetalert2";
 import { Formik, Form } from "formik";
 import * as Yup from "yup";
 import Field from "../components/Field";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import axios from "axios";
-import sha256 from "crypto-js/sha256";
 import Loader from "../template/Loader";
+import { API_ROOT } from "../defines";
 
 const Login = () => {
-  const { t } = useTranslation();
-  const { login, logout } = useApp();
+  const { login } = useApp();
   const [loading, setloading] = useState(false);
-
-  useEffect(() => {
-    logout();
-  }, [logout]);
 
   const onSubmit = async ({ username, password }) => {
     try {
       setloading(true);
       const response = await axios({
+        baseURL: API_ROOT,
         url: "/user/login",
         method: "POST",
         data: {
           username: username,
-          password: sha256(password).toString(),
+          password: password,
         },
       });
 
@@ -51,15 +46,15 @@ const Login = () => {
     <div className="text-center justify-center w-96 mx-auto">
       <Formik
         initialValues={{
-          email: "",
+          username: "",
           password: "",
         }}
         validationSchema={Validation}
         onSubmit={onSubmit}
       >
-        {({}) => (
+        {() => (
           <Form className="flex flex-col gap-5 my-10 mt-5">
-            <div className="text-5xl mb-4">Зөрчил</div>
+            <div className="text-5xl mb-4">LABEL ODT</div>
             <Field
               autoFocus={true}
               name="username"

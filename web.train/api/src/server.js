@@ -20,7 +20,7 @@ import {
   SECRET,
 } from "./consts";
 import { log } from "./utils";
-import { UserRouter, LogRouter, FileRouter, RootRouter } from "./routes";
+import { UserRouter, LogRouter, FileRouter, RootRouter, JobRouter } from "./routes";
 import agenda from "./utils/agenda";
 
 const app = express();
@@ -71,6 +71,7 @@ app.use("/static", express.static("static"));
 app.use("/user", UserRouter);
 app.use("/file", FileRouter);
 app.use("/root", RootRouter);
+app.use("/job", JobRouter);
 
 app.use("/test", (req, res) => {
   let total = 0;
@@ -82,8 +83,6 @@ app.use("/test", (req, res) => {
 
 // Error
 app.use((error, request, response, next) => {
-  console.log("🚀 ~ app.use ~ request:", request);
-
   if (error) {
     const d = {
       params: request.params,
@@ -92,12 +91,13 @@ app.use((error, request, response, next) => {
       error: error.toString(),
     };
 
-    const { status } = error;
+    const status =
+      error?.status || (error?.name === "UnauthorizedError" ? 401 : 500);
 
     log.error(d);
 
     return response
-      .status(status ? status : 500)
+      .status(status)
       .json({ success: false, message: error.toString() });
   } else next();
 });

@@ -22,13 +22,18 @@ mainApi.interceptors.response.use(
     return response;
   },
   (error) => {
-    if (error?.response?.status === 401) {
-      return Promise.reject(error);
-    }
-    if (error?.response?.status === 403) {
+    const clearSessionAndRedirect = () => {
+      RemoveFromStorage("user");
       RemoveFromStorage("token");
 
-      window.location = "/auth/logout";
+      if (window.location.pathname !== "/login") {
+        window.location = "/login";
+      }
+    };
+
+    if (error?.response?.status === 401 || error?.response?.status === 403) {
+      clearSessionAndRedirect();
+      return Promise.reject(error);
     }
     if (error?.response?.status === 400) {
       if (typeof error?.response?.data === "string")

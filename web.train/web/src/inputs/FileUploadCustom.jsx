@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useTranslation } from "react-i18next";
 import { RiDeleteBin2Line, RiUploadLine } from "react-icons/ri";
@@ -104,7 +104,7 @@ const renderIcon = (type) => {
 
 const iconClass = "text-2xl mr-2";
 const FileUpload = ({
-  root,
+  rootId,
   accept = "image/*",
   limit = 100,
   count = 100,
@@ -141,21 +141,15 @@ const FileUpload = ({
         setLoading(true);
         setProgress(0);
         const response = await mainApi({
-          url: `/file/fs/${root}`,
+          url: `/file/fs/${rootId}`,
           method: "POST",
           data: data,
-          auth: {
-            username: "hsct",
-            password:
-              "769a9a905bbd4046903581605db75cad20fe84c70868d9874a628f09347c47df",
-          },
           onUploadProgress: (event) => {
             setProgress(Math.round((event.loaded * 100) / event.total));
           },
         });
-        console.log("🚀 ~ onDrop ~ response:", response.data);
         if (response) {
-          onChange(response.data);
+          onChange([...(val || []), ...(response.data || [])]);
         }
       } catch (error) {
         translateError(t(`${error.message}`));
@@ -179,15 +173,10 @@ const FileUpload = ({
     try {
       setProgress(0);
 
-      onChange(null);
+      onChange(val.filter((item) => item.id !== id));
       await mainApi({
         method: "DELETE",
-        auth: {
-          username: "hsct",
-          password:
-            "769a9a905bbd4046903581605db75cad20fe84c70868d9874a628f09347c47df",
-        },
-        url: `/file/fs/${root}`,
+        url: `/file/fs/${rootId}`,
         data: { deleteds: [id] },
       });
     } catch (error) {
@@ -198,8 +187,7 @@ const FileUpload = ({
   };
 
   const renderItem = (file, index, last) => {
-    const { id, name } = file;
-    const url = getAbsolutePath(file);
+    const { id } = file;
 
     if (!id) return null;
 

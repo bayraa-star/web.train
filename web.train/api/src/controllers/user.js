@@ -12,9 +12,16 @@ export const login = async (request, response) => {
 };
 
 export const create = async (request, response) => {
-  await addUser(request);
+  const user = await addUser(request);
 
-  return response.send();
+  return response.json({
+    success: true,
+    user: {
+      id: user._id,
+      username: user.username,
+      role: user.role,
+    },
+  });
 };
 
 export const update = async (request, response) => {

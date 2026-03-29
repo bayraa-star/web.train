@@ -5,37 +5,70 @@ import { Types } from "mongoose";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { SECRET } from "../consts";
+
 const checkAccess = (accesses, role) => {
   if (!accesses.includes(role)) throw new Unauthorized("Зөвшөөрөлгүй хандалт");
   return;
 };
 
-const Validator = (fields, accesses) => {
+const getToken = (request) => {
+  const token = request?.headers?.authorization?.split(" ")[1];
+
+  if (!token) throw new Unauthorized("Нэвтрэх шаардлагатай");
+
+  return token;
+};
+
+const authenticateRequest = (request, accesses) => {
+  try {
+    const token = getToken(request);
+    const user = jwt.verify(token, SECRET);
+
+    request.user = user;
+
+    if (accesses) {
+      checkAccess(accesses, user.role);
+    }
+  } catch (error) {
+    if (error instanceof Unauthorized) throw error;
+
+    throw new Unauthorized("Нэвтрэх хугацаа дууссан эсвэл токен буруу байна");
+  }
+};
+
+const applyAuditFields = (request) => {
+  const { body, method, user } = request;
+
+  if (!body || typeof body !== "object") return;
+
+  if (method === "POST") {
+    body.created = new Date();
+    if (user?.id) body.createdby = user.id;
+    return;
+  }
+
+  body.modified = new Date();
+  if (user?.id) body.modifiedby = user.id;
+};
+
+const Validator = (fields, accesses, options = {}) => {
+  const { auth = true, audit = auth } = options;
+
   return [
     checkSchema(fields),
     (request, {}, next) => {
-      const { errors } = validationResult(request);
+      const errors = validationResult(request);
 
-      if (errors.length > 0) {
-        throw new Exception(errors[0]?.msg);
+      if (!errors.isEmpty()) {
+        throw new Exception(errors.array()[0]?.msg);
       }
 
-      const { body, method } = request;
-      const token = request?.headers?.authorization?.split(" ")[1];
-
-      if (!token) throw Error("Not authorizartion");
-      //
-      const user = jwt.decode(token, SECRET);
-      request.user = user;
-      if (accesses) {
-        checkAccess(accesses, user.role);
+      if (auth) {
+        authenticateRequest(request, accesses);
       }
-      if (method == "POST") {
-        body.created = new Date();
-        body.createdby = user?.id;
-      } else {
-        body.modified = new Date();
-        body.modifiedby = user?.id;
+
+      if (audit) {
+        applyAuditFields(request);
       }
 
       next();
@@ -43,9 +76,20 @@ const Validator = (fields, accesses) => {
   ];
 };
 
+export const authenticate = (accesses) => {
+  return (request, response, next) => {
+    authenticateRequest(request, accesses);
+    next();
+  };
+};
+
 export const string = ({ optional, min, max = 250 } = {}) => ({
   custom: {
     options: (value, { req, location, path }) => {
+      if (optional && (value === undefined || value === null || value === "")) {
+        return true;
+      }
+
       if (!optional && !value) {
         throw new Exception(`${path} утга оруулах шаардлагатай`);
       }
@@ -54,7 +98,7 @@ export const string = ({ optional, min, max = 250 } = {}) => ({
       if (max && value.length > max)
         throw new Exception(`${path}-ийн урт ${max}-с их байж болохгүй`);
 
-      return value;
+      return true;
     },
   },
   customSanitizer: {
@@ -75,19 +119,23 @@ export const number = (optional, { min, max } = {}) => ({
       if (max && value > max)
         throw new Exception(`${path}-ийн утга ${max}-с их байж болохгүй`);
 
-      return value + "";
+      return true;
     },
   },
 });
 
-export const array = (list = []) => ({
+export const array = (list = [], { optional = false } = {}) => ({
   custom: {
     options: (value, { req, location, path }) => {
+      if (optional && (value === undefined || value === null || value === "")) {
+        return true;
+      }
+
       if (!list.includes(value)) {
         throw new Exception(`${path} буруу утга байна`);
       }
 
-      return value;
+      return true;
     },
   },
 });
@@ -98,7 +146,7 @@ export const id = () => ({
       if (!Types.ObjectId.isValid(value))
         throw new Exception(`${path} буруу утга байна`);
 
-      return value;
+      return true;
     },
   },
 });

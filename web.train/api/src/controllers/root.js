@@ -7,15 +7,15 @@ import {
 } from "../services/root";
 
 export const create = async (request, response) => {
-  await addRoot(request);
+  const root = await addRoot(request);
 
-  return response.send();
+  return response.json(root);
 };
 
 export const update = async (request, response) => {
-  await updateRootById(request);
+  const root = await updateRootById(request);
 
-  return response.send();
+  return response.json(root);
 };
 
 export const read = async (request, response) => {

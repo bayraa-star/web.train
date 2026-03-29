@@ -1,9 +1,27 @@
 import express from "express";
-import { saveToFs, removeFromFs } from "../controllers/file";
+import {
+  approveFile,
+  declineFile,
+  deleteGenericFiles,
+  deleteFile,
+  labelFile,
+  progressFiles,
+  tableFiles,
+  uploadGenericFiles,
+  uploadFiles,
+} from "../controllers/file";
+import { authenticate } from "../validators/_common";
 
 let router = express.Router();
 
-router.post("/fs/:root", saveToFs);
-router.delete("/fs", removeFromFs);
+router.post("/fs/:rootId", authenticate(["admin", "labeler", "examiner"]), uploadGenericFiles);
+router.delete("/fs/:rootId", authenticate(["admin", "labeler", "examiner"]), deleteGenericFiles);
+router.post("/upload", authenticate(["admin"]), uploadFiles);
+router.get("/progress", authenticate(["admin"]), progressFiles);
+router.post("/table", authenticate(["admin", "labeler", "examiner"]), tableFiles);
+router.put("/label/:id", authenticate(["labeler"]), labelFile);
+router.put("/approve/:id", authenticate(["examiner"]), approveFile);
+router.put("/decline/:id", authenticate(["examiner"]), declineFile);
+router.delete("/:id", authenticate(["admin"]), deleteFile);
 
 export default router;

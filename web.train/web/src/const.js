@@ -218,7 +218,7 @@ const CAR_MODEL = [
   { label: "RX450hL", value: "RX450hL", brand: "LEXUS" },
   { label: "SC", value: "SC", brand: "LEXUS" },
   { label: "DUTRO", value: "DUTRO", brand: "HINO" },
-  { label: "PROFIA", value: "PROFIA", brand: "HINO" },
+  { : "PROFIA", value: "PROFIA", brand: "HINO" },
   { label: "RANGER", value: "RANGER", brand: "HINO" },
 
   { label: "A-CLASS", value: "A-CLASS", brand: "MERCEDES BENZ" },

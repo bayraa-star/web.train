@@ -1,52 +1,75 @@
 import { useContext, createContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
 import { RiCloseFill } from "react-icons/ri";
 import { GetFromStorage, RemoveFromStorage, SaveToStorage } from "./storage";
 
-import { locales } from "../language/Switch";
-
-window.addEventListener("storage", (event) => {
-  if (event.key === "logged-out") {
-    window.location = "/auth/logout";
-    window.close();
-  }
-});
-
 const AppContext = createContext({
   user: null,
-  badge: 0,
+  ready: false,
   login: () => {},
   logout: () => {},
   openDrawer: () => {},
   closeDrawer: () => {},
 });
 
+const parseJwt = (token) => {
+  try {
+    const payload = token.split(".")[1];
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(
+      normalized.length + ((4 - (normalized.length % 4)) % 4),
+      "="
+    );
+    const decoded = window.atob(padded);
+
+    return JSON.parse(decoded);
+  } catch (error) {
+    return null;
+  }
+};
+
+const isExpiredToken = (token) => {
+  const payload = parseJwt(token);
+
+  if (!payload?.exp) return true;
+
+  return payload.exp * 1000 <= Date.now();
+};
+
 const AppProvider = ({ children }) => {
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation();
-  const [user, setUser] = useState();
+  const [user, setUser] = useState(null);
+  const [ready, setReady] = useState(false);
   const [drawer, setDrawer] = useState();
   const [drawerWidth, setDrawerWidth] = useState(0);
 
+  const clearSession = () => {
+    RemoveFromStorage("user");
+    RemoveFromStorage("token");
+    setUser(null);
+  };
+
+  const setInstance = (nextUser, token) => {
+    if (nextUser && token && !isExpiredToken(token)) {
+      SaveToStorage("user", JSON.stringify(nextUser));
+      SaveToStorage("token", token);
+      setUser(nextUser);
+      return;
+    }
+
+    clearSession();
+  };
+
   const login = async (instance) => {
     setInstance(instance.user, instance.token);
-    navigate("/app/user");
+    navigate("/home", { replace: true });
   };
 
-  const logout = () => {
-    setInstance(null, null);
-  };
+  const logout = (redirect = "/login") => {
+    clearSession();
 
-  const setInstance = (user, token) => {
-    if (user) {
-      SaveToStorage("user", JSON.stringify(user));
-      SaveToStorage("token", token);
-      setUser(user);
-    } else {
-      RemoveFromStorage("user");
-      RemoveFromStorage("token");
-      setUser(null);
+    if (redirect) {
+      navigate(redirect, { replace: true });
     }
   };
 
@@ -61,16 +84,25 @@ const AppProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    (async () => {
+    try {
       const user = GetFromStorage("user");
       const token = GetFromStorage("token");
-      token && setInstance(JSON.parse(user), token);
-    })();
+
+      if (user && token && !isExpiredToken(token)) {
+        setUser(JSON.parse(user));
+      } else {
+        clearSession();
+      }
+    } catch (error) {
+      clearSession();
+    } finally {
+      setReady(true);
+    }
   }, []);
 
   return (
     <AppContext.Provider
-      value={{ user, login, logout, openDrawer, closeDrawer }}
+      value={{ user, ready, login, logout, openDrawer, closeDrawer }}
     >
       {drawer && (
         <div

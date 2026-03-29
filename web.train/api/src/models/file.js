@@ -5,6 +5,39 @@ const Name = "file";
 const Schema = new mongoose.Schema(
   {
     ...AuditFields,
+    root: { type: mongoose.Schema.Types.ObjectId, ref: "root", index: true },
+    job: { type: mongoose.Schema.Types.ObjectId, ref: "job", index: true },
+    label: { type: String, index: true },
+    originalName: { type: String, index: true },
+    assignedTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "user",
+      index: true,
+    },
+    labeledBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "user",
+      index: true,
+    },
+    labeledAt: { type: Date, index: true },
+    approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "user",
+      index: true,
+    },
+    approvedAt: { type: Date, index: true },
+    declinedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "user",
+      index: true,
+    },
+    declinedAt: { type: Date, index: true },
+    status: {
+      type: String,
+      index: true,
+      enum: ["uploaded", "labeled", "approved"],
+      default: "uploaded",
+    },
     id: { type: String, index: true, trim: true },
     name: { type: String },
     mime: { type: String },

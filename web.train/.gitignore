@@ -5,6 +5,8 @@
 /web/build
 /api/node_modules
 /api/dist
+/api/uploads
+/api/.env
 /.pnp
 .pnp.js
 

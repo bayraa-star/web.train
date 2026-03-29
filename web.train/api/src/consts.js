@@ -3,8 +3,8 @@ require("dotenv").config({
 });
 
 module.exports = {
-  // DB: "mongodb://odt:odt123456@localhost:27017/odt?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+2.1.1",
-  DB: "mongodb://localhost:27017/?retryWrites=true&serverSelectionTimeoutMS=5000&connectTimeoutMS=10000",
+  DB: process.env.DB,
+  // DB: "mongodb://localhost:27017/?retryWrites=true&serverSelectionTimeoutMS=5000&connectTimeoutMS=10000",
   ALLOWED_ORIGINS: [
     "http://localhost:3000",
     "http://localhost:3305",
@@ -21,8 +21,12 @@ module.exports = {
   XYP: "http://vil.odt.mn:5002",
   // XYP: "http://localhost:80/xyp/invoker.php",
   // XYP: "http://103.9.90.140:80/xyp/invoker.php",
-  JWT: { secret: "odt-violation-api", algorithms: ["HS256"] },
-  SECRET: "odt-violation-api",
+  JWT: { secret: process.env.SECRET_KEY, algorithms: ["HS256"] },
+  SECRET: process.env.SECRET_KEY,
+  BASIC_AUTH: {
+    username: process.env.BASIC_AUTH_USERNAME,
+    password: process.env.BASIC_AUTH_PASSWORD,
+  },
   EXPIRE: {
     expiresIn: "12h",
   },

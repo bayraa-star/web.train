@@ -155,17 +155,12 @@ const UserForm = () => {
                     value: `admin`,
                   },
                   {
-                    label: `Цагдаа`,
-                    value: `police`,
-                  },
-
-                  {
-                    label: `Цагдаа админ`,
-                    value: `police_admin`,
+                    label: `Labeler`,
+                    value: `labeler`,
                   },
                   {
-                    label: `Статистик`,
-                    value: `statistic`,
+                    label: `Examiner`,
+                    value: `examiner`,
                   },
                 ]}
                 type="text"
