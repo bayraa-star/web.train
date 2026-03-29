@@ -208,7 +208,10 @@ const runDatasetExport = async (exportId) => {
     for (const [index, file] of files.entries()) {
       const relativeUploadPath = toRelativeUploadPath(file.id);
       const sourcePath = toAbsoluteUploadPath(file.id);
-      const destinationPath = path.join(tempDirectory, relativeUploadPath);
+      const destinationPath = path.join(
+        tempDirectory,
+        path.basename(relativeUploadPath)
+      );
       const destinationDirectory = path.dirname(destinationPath);
 
       mkdirp.sync(destinationDirectory);

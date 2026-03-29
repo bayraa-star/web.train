@@ -2,18 +2,42 @@
 
 ## Scope
 
-This repository is a two-app project under `web.train/`:
+This repository is a two-app OCR labeling system under `web.train/`:
 
 - `web.train/api`: Express + Mongoose backend, transpiled with Babel
-- `web.train/web`: Create React App frontend with Tailwind, Ant Design, and Axios
+- `web.train/web`: Create React App frontend
 
-The repo root is mostly a wrapper. Most work happens inside those two subdirectories.
+Most real work happens inside those two subdirectories. The repo root contains shared documentation and the Postman collection.
+
+## Current Product Shape
+
+The current product is a role-based image labeling workflow:
+
+1. `admin` creates users and jobs, uploads raw images, and assigns them to a labeler
+2. `labeler` types plate text and submits it
+3. `examiner` approves or declines the submitted text
+4. approved items generate final annotation artifacts
+5. admin can review progress, trash, and dataset exports
+
+Current roles:
+
+- `admin`
+- `labeler`
+- `examiner`
+
+Current file statuses:
+
+- `uploaded`
+- `labeled`
+- `approved`
+- `deleted`
 
 ## Repo Map
 
 ### Backend
 
-- Entry point: `web.train/api/src/server.js`
+- Entry point for worker process: `web.train/api/src/server.js`
+- PM2 cluster entry: `web.train/api/cluster.js`
 - Routes: `web.train/api/src/routes/*.js`
 - Controllers: `web.train/api/src/controllers/*.js`
 - Services: `web.train/api/src/services/*.js`
@@ -21,23 +45,119 @@ The repo root is mostly a wrapper. Most work happens inside those two subdirecto
 - Validators: `web.train/api/src/validators/*.js`
 - Shared helpers: `web.train/api/src/utils/*.js`
 
-The backend follows a route -> controller -> service -> model pattern. The common list endpoint behavior is implemented by `web.train/api/src/utils/db.js` and returns:
+Important backend modules:
 
-- `total`
-- `skip`
-- `limit`
-- `offset`
-- `items`
+- `src/controllers/file.js`
+  - upload flow
+  - label / approve / decline
+  - soft-delete to trash
+  - progress dashboard
+- `src/controllers/dataset.js`
+  - server-side dataset export jobs
+- `src/services/job.js`
+  - role-aware job visibility
+- `src/services/user.js`
+  - login, hashing, user delete safety checks
 
 ### Frontend
 
 - Entry point: `web.train/web/src/index.js`
+- Main workspace: `web.train/web/src/pages/Home.jsx`
 - API client: `web.train/web/src/providers/api.js`
-- Shared formatting/helpers: `web.train/web/src/providers/*.js`
-- Reusable inputs/components: `web.train/web/src/inputs`, `web.train/web/src/components`, `web.train/web/src/template`
-- Pages: `web.train/web/src/pages`
+- Auth/session provider: `web.train/web/src/providers/app.js`
+- Admin pages:
+  - `src/pages/components/AdminProgressSection.jsx`
+  - `src/pages/components/UserCreateSection.jsx`
+  - `src/pages/components/UserManagementSection.jsx`
+  - `src/pages/components/UploadSection.jsx`
+  - `src/pages/components/JobManagementSection.jsx`
+  - `src/pages/components/TrashSection.jsx`
+  - `src/pages/components/DatasetDownloadSection.jsx`
+- Labeler page:
+  - `src/pages/components/LabelingSection.jsx`
+- Examiner page:
+  - `src/pages/components/ExaminerSection.jsx`
 
-The currently mounted frontend is much smaller than the file tree suggests. `src/index.js` only mounts `/home` and redirects `*` to `/home`. Many other layouts/pages appear to be legacy or partially disconnected.
+## Router Shape
+
+### Frontend
+
+The app uses:
+
+- `/login`
+- `/logout`
+- `/home/*`
+
+`/home/*` is role-driven:
+
+- `admin`
+  - `/home/dashboard`
+  - `/home/users`
+  - `/home/uploads`
+  - `/home/trash`
+  - `/home/dataset`
+- `labeler`
+  - labeling workspace only
+- `examiner`
+  - examiner workspace only
+
+### Backend
+
+Mounted route groups in `src/server.js`:
+
+- `/user`
+- `/file`
+- `/root`
+- `/job`
+- `/dataset`
+- `/uploads` static files
+
+## Auth And Access
+
+### JWT
+
+- login: `POST /user/login`
+- frontend stores JWT in browser storage
+- expired or invalid JWT redirects user back to `/login`
+- request auth is enforced through `src/validators/_common.js`
+- current implementation uses `jwt.verify(...)`, not just decode
+
+### Basic Auth
+
+Used only for:
+
+- `POST /user`
+
+Credentials come from API `.env`:
+
+- `BASIC_AUTH_USERNAME`
+- `BASIC_AUTH_PASSWORD`
+
+Frontend admin user creation uses explicit Basic Auth and does not go through the JWT interceptor.
+
+## Storage Model
+
+Uploads are no longer tied to the API working directory. The real filesystem root is configurable.
+
+Environment:
+
+- `UPLOADS_ROOT`
+
+If `UPLOADS_ROOT` is not set, the backend falls back to `web.train/api/uploads`.
+
+Important behavior:
+
+- public URLs still stay under `/uploads/...`
+- real files may live anywhere, for example `/media/web-train/uploads`
+- uploaded image filenames are replaced with UUID names
+- original uploaded names are stored in `originalName`
+
+Generated annotation files:
+
+- `<image>.txt`
+- `labels.csv`
+
+These are written only for approved items, beside the image inside the assigned labeler/job storage tree.
 
 ## Commands
 
@@ -45,115 +165,164 @@ Run commands from the app subdirectory, not the repo root.
 
 ### Backend
 
-- Install: `npm install`
-- Dev: `npm run dev`
-- Build: `npm run build`
-- PM2 start: `npm run start`
+- install: `npm install`
+- dev: `npm run dev`
+- build: `npm run build`
+- start: `npm run start`
+- stop: `npm run stop`
+- restart: `npm run restart`
 
-Verified during inspection:
+Notes:
 
-- `web.train/api` builds successfully with `npm run build`
+- `npm run start` starts `cluster.js`
+- `cluster.js` forks workers that load `dist/server.js`
+- set `CLUSTER_WORKERS=<count>` to control worker count
 
 ### Frontend
 
-- Install: `npm install`
-- Dev: `npm run dev`
-- Build: `npm run build`
-- PM2 start: `npm run start`
+- install: `npm install`
+- dev: `npm run dev`
+- build: `npm run build`
+- start: `npm run start`
+- stop: `npm run stop`
+- restart: `npm run restart`
 
-Verified during inspection:
+## Verified State
 
-- `web.train/web` build currently fails because `react-scripts` is not available in the local install
-- `web.train/web/package.json` currently declares `react-scripts` as `^0.0.0`, which is likely accidental and should be treated as suspicious before doing frontend dependency work
+These are currently true and should replace older assumptions:
 
-## Environment
+- backend builds successfully with `npm run build`
+- frontend builds successfully with `npm run build`
+- frontend is no longer a simple root-upload UI
+- `react-scripts` is installed correctly
+- admin menu exists and is active
+- `/job` and `/dataset` are real backend route groups
+- trash and dataset export are real product features
 
-Backend `.env` currently expects these keys:
+## Key API Behavior
 
-- `DB`
-- `SECRET_KEY`
-- `MEDIAMTX_API_URL`
+### Files
 
-Do not print or commit secret values. Document names only.
+Important endpoints:
 
-## Backend Notes
+- `POST /file/upload`
+- `POST /file/table`
+- `PUT /file/label/:id`
+- `PUT /file/trash/:id`
+- `PUT /file/approve/:id`
+- `PUT /file/decline/:id`
+- `GET /file/progress`
+- `DELETE /file/:id`
 
-- `web.train/api/src/server.js` mounts `/user`, `/file`, and `/root`
-- MongoDB connection is created during server startup
-- Static files are served from `/uploads` and `/static`
-- `agenda` exists but scheduled jobs are commented out in startup
-- User-facing CRUD endpoints rely on validators to decode auth and stamp audit fields
+Behavior notes:
 
-### Auth Behavior
+- `PUT /file/label/:id`
+  - labeler can submit a new label
+  - labeler can also update an item already waiting for examiner review
+- `PUT /file/trash/:id`
+  - labeler-only soft delete
+  - moves item to `status: "deleted"`
+  - does not remove the original image from disk
+- `DELETE /file/:id`
+  - admin-only hard delete
+  - removes file record and underlying image
 
-- Validators decode JWT from the `Authorization` header in `web.train/api/src/validators/_common.js`
-- They use `jwt.decode(...)`, not `jwt.verify(...)`
-- Access control is role-based after decode
-- If a route skips validators, it also skips auth/audit handling
+### Jobs
 
-This matters when adding routes. In this codebase, validators do more than input validation.
+- admins see all jobs
+- labelers only see jobs that already have files assigned to them
+- deleted files are excluded from labeler-assigned job discovery
 
-### File Upload Flow
+### Dashboard
 
-`web.train/api/src/controllers/file.js` does more than store uploads:
+- per-labeler progress is computed from Mongo
+- deleted items are excluded from progress totals
+- progress can be filtered by `jobId`
 
-- Saves uploaded files to `uploads/<root>/`
-- Stores metadata in Mongo via the `file` model
-- Creates a sibling `.txt` file per upload
-- Appends `<id>,<plate>` rows to `labels.csv`
+### Dataset Export
 
-Any change to upload semantics must account for both filesystem side effects and Mongo persistence.
+Dataset export is server-side, not browser-side.
 
-## Frontend Notes
+Routes:
 
-- Global Axios base URL is set from `API_ROOT` in `web.train/web/src/index.js`
-- `mainApi` in `web.train/web/src/providers/api.js` attaches bearer token and language headers
-- Production API target is hardcoded in `web.train/web/src/defines.js`
-- `Home.jsx` currently drives the main flow by listing roots and rendering upload widgets per root
+- `POST /dataset/export`
+- `GET /dataset/export/:id`
 
-### Current Product Shape
+Export scopes:
 
-The active UI appears focused on:
+- `approved`
+- `all`
 
-- fetching root records from `/root/table`
-- creating new roots with `/root`
-- uploading files into a selected root with `/file/fs/:root`
+Behavior:
 
-Large parts of the frontend tree look inherited from a broader admin app and may not be live in the current router.
+- export jobs are stored in Mongo so progress works correctly even with clustered API workers
+- backend copies files into a temporary export directory
+- exported images are flattened into the zip root, not grouped by task or labeler folder
+- backend creates sibling `.txt` files and one combined root `labels.csv` for approved items
+- backend zips the export directory
+- frontend polls the export status and only shows the download button when ready
 
-## Known Issues And Risks
+## Frontend Workflow Notes
 
-These were verified directly from the current tree:
+### Admin
 
-- `web.train/api/src/server.js` imports `{ log }` from `web.train/api/src/utils`, but `web.train/api/src/utils/index.js` does not currently export `log`
-- Frontend build is blocked by the current `react-scripts` dependency state
-- Client upload requests send hard-coded basic-auth credentials, but backend basic-auth middleware is commented out in `server.js`
-- JWT handling decodes tokens but does not verify them
-- `web.train/web/src/defines.js` hardcodes a production IP address
-- There are many leftover `console.log` calls across both apps
-- There is no meaningful top-level project documentation besides placeholder READMEs
-- No automated test suite was found in active use
+- Dashboard: labeler progress by job
+- Users: create, edit, delete users
+- Uploads & Jobs: create job, upload files, manage jobs
+- Trash: review soft-deleted items
+- Dataset: start and download dataset exports
+
+### Labeler
+
+- can pick assigned job
+- can switch view between `uploaded`, `labeled`, and `approved`
+- submitted items are editable until examiner approval
+- can move editable items to trash
+- declined items return to `uploaded` and are shown as resubmission work
+
+### Examiner
+
+- picks a job
+- reviews `labeled` items
+- can approve or decline
+
+## Known Risks And Constraints
+
+- This repo still contains legacy names such as `violation` in package metadata and some old files
+- Do not assume older files under `web.train/web/src/pages` are active; confirm from `src/index.js` and `Home.jsx`
+- Because the backend runs in cluster mode, do not store shared job state only in memory if it needs to be polled later
+- Upload changes must account for:
+  - Mongo file records
+  - filesystem placement
+  - sibling `.txt`
+  - `labels.csv`
+  - static file serving under `/uploads`
 
 ## Working Rules For Agents
 
-- Check `git status --short` before editing; this repo may already be dirty
-- Do not assume files under `web.train/web/src` are all active routes; confirm from `src/index.js` first
-- When adding protected backend endpoints, use validators or replicate their audit/auth behavior intentionally
-- When changing upload behavior, inspect both backend file handling and frontend `FileUploadCustom.jsx`
-- Prefer small, targeted fixes; several modules look legacy and loosely maintained
+- Check `git status --short` before editing
+- Confirm active frontend routes from `web.train/web/src/index.js` and `Home.jsx`
+- Prefer the existing route -> controller -> service -> model structure on the backend
+- Use validators or `authenticate(...)` for protected routes
+- Treat upload-path work carefully because files may now live outside the repo under `UPLOADS_ROOT`
+- For new long-running work, prefer persistent state over in-memory state because the API is clustered
 - Verify backend changes with `npm run build` in `web.train/api`
-- Verify frontend changes with `npm run build` in `web.train/web`, but expect dependency issues until `react-scripts` is corrected
+- Verify frontend changes with `npm run build` in `web.train/web`
 
 ## Suggested Starting Points
 
 For backend work:
 
-- start at `web.train/api/src/server.js`
-- then inspect the matching route/controller/service/model chain
+- `web.train/api/src/server.js`
+- matching route in `src/routes`
+- controller in `src/controllers`
 
 For frontend work:
 
-- start at `web.train/web/src/index.js`
-- then inspect `web.train/web/src/pages/Home.jsx`
-- follow requests through `web.train/web/src/providers/api.js`
+- `web.train/web/src/index.js`
+- `web.train/web/src/pages/Home.jsx`
+- relevant component under `src/pages/components`
 
+For API verification:
+
+- `postman/web-train-api.postman_collection.json`
