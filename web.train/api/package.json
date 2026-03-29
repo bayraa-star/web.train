@@ -11,11 +11,11 @@
     "fetch": "git pull && npm install",
     "dev": "nodemon -x babel-node src/server.js --trace-warnings",
     "build": "rimraf dist/ && babel ./src --out-dir dist/ --ignore node_modules",
-    "stop": "pm2 stop dist/server.js",
-    "start": "npm run build && pm2 start dist/server.js -i max",
-    "xaxa": "npm run build && pm2 start dist/server.js --node-args=\"--max-old-space-size=12144\" --name \"$npm_package_config_port $npm_package_config_domain\"",
+    "stop": "pm2 stop cluster.js",
+    "start": "npm run build && pm2 start cluster.js",
+    "xaxa": "npm run build && pm2 start cluster.js --node-args=\"--max-old-space-size=12144\" --name \"$npm_package_config_port $npm_package_config_domain\"",
     "restart": "npm run stop && npm run start",
-    "publish": "npm run fetch && npm run build && pm2 restart dist/server.js"
+    "publish": "npm run fetch && npm run build && pm2 restart cluster.js"
   },
   "author": "mD",
   "license": "ISC",

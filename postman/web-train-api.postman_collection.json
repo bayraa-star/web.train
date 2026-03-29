@@ -1,0 +1,1271 @@
+{
+  "info": {
+    "_postman_id": "d6d902d4-86d0-45e0-b0b4-4e2de8377863",
+    "name": "web.train API",
+    "description": "Postman collection for the current web.train workflow: admin uploads tasks, labelers submit OCR text, examiners approve final labels.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "codex"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5001"
+    },
+    {
+      "key": "basicUsername",
+      "value": ""
+    },
+    {
+      "key": "basicPassword",
+      "value": ""
+    },
+    {
+      "key": "jwtToken",
+      "value": ""
+    },
+    {
+      "key": "adminToken",
+      "value": ""
+    },
+    {
+      "key": "labelerToken",
+      "value": ""
+    },
+    {
+      "key": "examinerToken",
+      "value": ""
+    },
+    {
+      "key": "userId",
+      "value": ""
+    },
+    {
+      "key": "adminUserId",
+      "value": ""
+    },
+    {
+      "key": "labelerUserId",
+      "value": ""
+    },
+    {
+      "key": "examinerUserId",
+      "value": ""
+    },
+    {
+      "key": "assignedToUserId",
+      "value": ""
+    },
+    {
+      "key": "rootId",
+      "value": ""
+    },
+    {
+      "key": "jobId",
+      "value": ""
+    },
+    {
+      "key": "fileId",
+      "value": ""
+    },
+    {
+      "key": "plateText",
+      "value": "0659 УНГ"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.token) {",
+                  "  pm.collectionVariables.set('jwtToken', json.token);",
+                  "  pm.collectionVariables.set('adminToken', json.token);",
+                  "}",
+                  "if (json.user && json.user.id) {",
+                  "  pm.collectionVariables.set('userId', json.user.id);",
+                  "  pm.collectionVariables.set('adminUserId', json.user.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"BATO\",\n  \"password\": \"your-admin-password\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/user/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "user",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login Labeler",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.token) {",
+                  "  pm.collectionVariables.set('jwtToken', json.token);",
+                  "  pm.collectionVariables.set('labelerToken', json.token);",
+                  "}",
+                  "if (json.user && json.user.id) {",
+                  "  pm.collectionVariables.set('userId', json.user.id);",
+                  "  pm.collectionVariables.set('labelerUserId', json.user.id);",
+                  "  pm.collectionVariables.set('assignedToUserId', json.user.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"LABELER\",\n  \"password\": \"your-labeler-password\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/user/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "user",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login Examiner",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.token) {",
+                  "  pm.collectionVariables.set('jwtToken', json.token);",
+                  "  pm.collectionVariables.set('examinerToken', json.token);",
+                  "}",
+                  "if (json.user && json.user.id) {",
+                  "  pm.collectionVariables.set('userId', json.user.id);",
+                  "  pm.collectionVariables.set('examinerUserId', json.user.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"EXAMINER\",\n  \"password\": \"your-examiner-password\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/user/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "user",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Labeler (Basic Auth)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.user && json.user.id) {",
+                  "  pm.collectionVariables.set('assignedToUserId', json.user.id);",
+                  "  pm.collectionVariables.set('labelerUserId', json.user.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{basicUsername}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{basicPassword}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"LABELER\",\n  \"password\": \"labeler-password\",\n  \"role\": \"labeler\",\n  \"firstname\": \"Label\",\n  \"lastname\": \"User\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/user",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "user"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Examiner (Basic Auth)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.user && json.user.id) {",
+                  "  pm.collectionVariables.set('examinerUserId', json.user.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{basicUsername}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{basicPassword}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"EXAMINER\",\n  \"password\": \"examiner-password\",\n  \"role\": \"examiner\",\n  \"firstname\": \"Exam\",\n  \"lastname\": \"Reviewer\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/user",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "user"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "List Users",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"find\": {},\n  \"sort\": {\n    \"_id\": -1\n  },\n  \"offset\": 0,\n  \"limit\": 20\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/user/table",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "user",
+                "table"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/user/{{userId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "user",
+                "{{userId}}"
+              ]
+            },
+            "description": "Admin-only. Deletes a user when no files are linked to that user. The current admin cannot delete their own account."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Jobs",
+      "item": [
+        {
+          "name": "Create Job",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json && json._id) pm.collectionVariables.set('jobId', json._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Batch 2026-03-29 A\",\n  \"description\": \"Optional upload batch description\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/job",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "job"
+              ]
+            },
+            "description": "Admin-only. Creates a job and stores its id into jobId."
+          },
+          "response": []
+        },
+        {
+          "name": "List Jobs (Admin View)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json && Array.isArray(json.items) && json.items[0] && json.items[0]._id) pm.collectionVariables.set('jobId', json.items[0]._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sort\": {\n    \"created\": -1\n  },\n  \"offset\": 0,\n  \"limit\": 100\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/job/table",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "job",
+                "table"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Assigned Jobs (Labeler View)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json && Array.isArray(json.items) && json.items[0] && json.items[0]._id) pm.collectionVariables.set('jobId', json.items[0]._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{labelerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sort\": {\n    \"created\": -1\n  },\n  \"offset\": 0,\n  \"limit\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/job/table",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "job",
+                "table"
+              ]
+            },
+            "description": "Labeler sees only jobs that already have files assigned to that labeler."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Job",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/job/{{jobId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "job",
+                "{{jobId}}"
+              ]
+            },
+            "description": "Admin-only. Deletes a job when no uploaded files are linked to it."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Get Labeling Progress By Job",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/file/progress?jobId={{jobId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "file",
+                "progress"
+              ],
+              "query": [
+                {
+                  "key": "jobId",
+                  "value": "{{jobId}}"
+                }
+              ]
+            },
+            "description": "Admin-only. Returns per-labeler progress for the selected job. Remove the jobId query to get all jobs combined."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Labels",
+      "item": [
+        {
+          "name": "Create Label",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json && json._id) pm.collectionVariables.set('rootId', json._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"root\": \"TEST\",\n  \"description\": \"Optional legacy label\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/root",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "root"
+              ]
+            },
+            "description": "Labels remain available in the API, but OCR approval now uses free-text plate entry rather than selecting a predefined label."
+          },
+          "response": []
+        },
+        {
+          "name": "List Labels",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"find\": {},\n  \"sort\": {\n    \"_id\": -1\n  },\n  \"offset\": 0,\n  \"limit\": 100\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/root/table",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "root",
+                "table"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Files",
+      "item": [
+        {
+          "name": "Upload Generic Files",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "upload",
+                  "type": "file",
+                  "src": "/replace/with/local/file.jpg"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/file/fs/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "file",
+                "fs",
+                "profile"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Upload Task To Labeler",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (Array.isArray(json) && json[0] && json[0]._id) pm.collectionVariables.set('fileId', json[0]._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "assignedTo",
+                  "value": "{{assignedToUserId}}",
+                  "type": "text"
+                },
+                {
+                  "key": "jobId",
+                  "value": "{{jobId}}",
+                  "type": "text"
+                },
+                {
+                  "key": "upload",
+                  "type": "file",
+                  "src": "/replace/with/local/image.jpg"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/file/upload",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "file",
+                "upload"
+              ]
+            },
+            "description": "Admin-only. Creates a new uploaded task inside the selected job, assigns it to the chosen labeler, and stores the first returned task id into fileId."
+          },
+          "response": []
+        },
+        {
+          "name": "List Uploaded Tasks (Labeler View)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json && Array.isArray(json.items) && json.items[0] && json.items[0]._id) pm.collectionVariables.set('fileId', json.items[0]._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{labelerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"find\": {\n    \"status\": \"uploaded\",\n    \"job\": \"{{jobId}}\"\n  },\n  \"sort\": {\n    \"created\": -1,\n    \"_id\": -1\n  },\n  \"offset\": 0,\n  \"limit\": 100\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/file/table",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "file",
+                "table"
+              ]
+            },
+            "description": "Labeler sees only own uploaded tasks that still need OCR entry. Filter by the selected assigned job."
+          },
+          "response": []
+        },
+        {
+          "name": "Submit Label For Review",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{labelerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"label\": \"{{plateText}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/file/label/{{fileId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "file",
+                "label",
+                "{{fileId}}"
+              ]
+            },
+            "description": "Labeler-only. Saves uppercase OCR text into the file record. It can be used on both uploaded items and already-submitted items that are still waiting for examiner review. This does not write .txt or labels.csv yet."
+          },
+          "response": []
+        },
+        {
+          "name": "List Submitted Labels (Labeler View)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json && Array.isArray(json.items) && json.items[0] && json.items[0]._id) pm.collectionVariables.set('fileId', json.items[0]._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{labelerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"find\": {\n    \"status\": \"labeled\",\n    \"job\": \"{{jobId}}\"\n  },\n  \"sort\": {\n    \"labeledAt\": -1,\n    \"_id\": -1\n  },\n  \"offset\": 0,\n  \"limit\": 100\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/file/table",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "file",
+                "table"
+              ]
+            },
+            "description": "Labeler sees own submitted labels waiting for examiner review, ordered from newest submitted to oldest."
+          },
+          "response": []
+        },
+        {
+          "name": "List Approved Labels (Labeler View)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json && Array.isArray(json.items) && json.items[0] && json.items[0]._id) pm.collectionVariables.set('fileId', json.items[0]._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{labelerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"find\": {\n    \"status\": \"approved\",\n    \"job\": \"{{jobId}}\"\n  },\n  \"sort\": {\n    \"approvedAt\": -1,\n    \"_id\": -1\n  },\n  \"offset\": 0,\n  \"limit\": 100\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/file/table",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "file",
+                "table"
+              ]
+            },
+            "description": "Labeler sees own approved labels for the selected assigned job."
+          },
+          "response": []
+        },
+        {
+          "name": "List Pending Review (Examiner View)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json && Array.isArray(json.items) && json.items[0] && json.items[0]._id) pm.collectionVariables.set('fileId', json.items[0]._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{examinerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"find\": {\n    \"status\": \"labeled\",\n    \"job\": \"{{jobId}}\"\n  },\n  \"sort\": {\n    \"labeledAt\": -1,\n    \"_id\": -1\n  },\n  \"offset\": 0,\n  \"limit\": 100\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/file/table",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "file",
+                "table"
+              ]
+            },
+            "description": "Examiner sees pending submissions from labelers for the selected job, ordered from newest submitted to oldest."
+          },
+          "response": []
+        },
+        {
+          "name": "Approve Label",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{examinerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"label\": \"{{plateText}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/file/approve/{{fileId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "file",
+                "approve",
+                "{{fileId}}"
+              ]
+            },
+            "description": "Examiner-only. Writes the final uppercase label into the DB, sibling .txt file, and labels.csv, then marks the task as approved."
+          },
+          "response": []
+        },
+        {
+          "name": "Decline Label",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{examinerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"label\": \"{{plateText}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/file/decline/{{fileId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "file",
+                "decline",
+                "{{fileId}}"
+              ]
+            },
+            "description": "Examiner-only. Sends the item back to the labeler as uploaded again, keeps the current OCR text as the draft label, and clears any generated artifacts."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete File Task",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/file/{{fileId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "file",
+                "{{fileId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Misc",
+      "item": [
+        {
+          "name": "Health Test",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/test",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "test"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
