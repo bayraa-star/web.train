@@ -45,6 +45,8 @@ const formatFileSize = (value) => {
 };
 
 const DatasetDownloadSection = () => {
+  const [jobs, setJobs] = useState([]);
+  const [jobId, setJobId] = useState("");
   const [scope, setScope] = useState(DATASET_OPTIONS[0].value);
   const [exportJob, setExportJob] = useState(null);
   const [archives, setArchives] = useState([]);
@@ -55,6 +57,12 @@ const DatasetDownloadSection = () => {
 
   const scopeMeta =
     DATASET_OPTIONS.find((option) => option.value === scope) || DATASET_OPTIONS[0];
+
+  const getTaskLabel = (taskType) => {
+    if (taskType === "ocr_detection") return "OCR + Detection";
+    if (taskType === "detection") return "Detection";
+    return "OCR";
+  };
 
   const downloadHref = useMemo(() => {
     if (!exportJob?.downloadPath) {
@@ -116,6 +124,36 @@ const DatasetDownloadSection = () => {
   };
 
   useEffect(() => {
+    const fetchJobs = async () => {
+      try {
+        const response = await mainApi({
+          url: "/job/table",
+          method: "POST",
+          data: {
+            limit: 200,
+            sort: {
+              created: -1,
+            },
+          },
+        });
+
+        const nextJobs = response?.data?.items || [];
+        setJobs(nextJobs);
+        setJobId((previous) => {
+          if (previous && nextJobs.some((item) => item._id === previous)) {
+            return previous;
+          }
+
+          return nextJobs?.[0]?._id || "";
+        });
+      } catch (err) {
+        setJobs([]);
+        setJobId("");
+        setError(err);
+      }
+    };
+
+    fetchJobs();
     fetchArchives({ silent: true });
   }, []);
 
@@ -147,6 +185,7 @@ const DatasetDownloadSection = () => {
         url: "/dataset/export",
         method: "POST",
         data: {
+          jobId,
           scope,
         },
       });
@@ -204,6 +243,26 @@ const DatasetDownloadSection = () => {
       </div>
 
       <div className="mt-4 flex flex-col gap-2 md:max-w-md">
+        <div className="text-sm font-medium">Job</div>
+        <select
+          value={jobId}
+          onChange={(event) => setJobId(event.target.value)}
+          disabled={loading || (exportJob && !["finished", "error"].includes(exportJob.status))}
+          className="border rounded px-3 py-2"
+        >
+          <option value="">Select job</option>
+          {jobs.map((job) => (
+            <option key={job._id} value={job._id}>
+              {job.name} ({getTaskLabel(job.taskType)})
+            </option>
+          ))}
+        </select>
+        <div className="text-xs text-gray-500">
+          Export only the images and labels that belong to the selected job.
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-col gap-2 md:max-w-md">
         <div className="text-sm font-medium">Dataset Scope</div>
         <select
           value={scope}
@@ -223,7 +282,9 @@ const DatasetDownloadSection = () => {
       <button
         type="button"
         onClick={startExport}
-        disabled={loading || (exportJob && !["finished", "error"].includes(exportJob.status))}
+        disabled={
+          !jobId || loading || (exportJob && !["finished", "error"].includes(exportJob.status))
+        }
         className="!w-auto mt-4 border px-6 py-2 rounded inline-flex disabled:opacity-50"
       >
         {loading
@@ -239,6 +300,12 @@ const DatasetDownloadSection = () => {
         <div className="mt-6 rounded border bg-gray-50 p-4">
           <div className="text-sm font-medium">Export Status</div>
           <div className="mt-2 text-sm text-gray-600">
+            Job: {exportJob.jobName || "-"}
+          </div>
+          <div className="mt-1 text-sm text-gray-600">
+            Label Type: {getTaskLabel(exportJob.taskType)}
+          </div>
+          <div className="mt-1 text-sm text-gray-600">
             Scope:{" "}
             {DATASET_OPTIONS.find((option) => option.value === exportJob.scope)?.label ||
               exportJob.scope}
@@ -306,6 +373,8 @@ const DatasetDownloadSection = () => {
               <thead>
                 <tr className="border-b text-gray-500">
                   <th className="px-3 py-3 font-medium">File</th>
+                  <th className="px-3 py-3 font-medium">Job</th>
+                  <th className="px-3 py-3 font-medium">Label Type</th>
                   <th className="px-3 py-3 font-medium">Scope</th>
                   <th className="px-3 py-3 font-medium">Size</th>
                   <th className="px-3 py-3 font-medium">Created</th>
@@ -318,6 +387,12 @@ const DatasetDownloadSection = () => {
                   <tr key={archive.fileName} className="border-b align-top">
                     <td className="px-3 py-3">
                       <div className="font-medium">{archive.fileName}</div>
+                    </td>
+                    <td className="px-3 py-3 text-gray-600">
+                      {archive.jobName || "-"}
+                    </td>
+                    <td className="px-3 py-3 text-gray-600">
+                      {getTaskLabel(archive.taskType)}
                     </td>
                     <td className="px-3 py-3 text-gray-600">
                       {DATASET_OPTIONS.find((option) => option.value === archive.scope)

@@ -707,7 +707,7 @@ const DetectionCanvas = ({
                     height={height}
                     fill="rgba(34,211,238,0.12)"
                     stroke={stroke}
-                    strokeWidth={selected ? 2 : 1.5}
+                    strokeWidth={selected ? 1 : 0.75}
                     onPointerDown={(event) => startMoveAnnotation(event, annotation)}
                   />
                   <text
@@ -729,10 +729,10 @@ const DetectionCanvas = ({
                         return (
                           <rect
                             key={handle}
-                            x={handleX - 4}
-                            y={handleY - 4}
-                            width={8}
-                            height={8}
+                            x={handleX - 3}
+                            y={handleY - 3}
+                            width={6}
+                            height={6}
                             fill="#22d3ee"
                             stroke="#0f172a"
                             onPointerDown={(event) =>
@@ -755,7 +755,7 @@ const DetectionCanvas = ({
                 fill="rgba(244,114,182,0.14)"
                 stroke="#f472b6"
                 strokeDasharray="6 4"
-                strokeWidth={2}
+                strokeWidth={1}
               />
             ) : null}
           </svg>

@@ -6,6 +6,7 @@ import { v4 as uuid } from "uuid";
 
 import File from "../models/file";
 import DatasetExport from "../models/datasetExport";
+import Job from "../models/job";
 import { UPLOADS_ROOT } from "../consts";
 import { Exception } from "../utils";
 
@@ -71,15 +72,36 @@ const getScopeFromFileName = (fileName = "") => {
   return match?.[1] || "";
 };
 
-const getDatasetScope = (scope) => {
+const getTaskLabel = (taskType = "ocr") => {
+  if (taskType === "ocr_detection") return "ocr-detection";
+  if (taskType === "detection") return "detection";
+  return "ocr";
+};
+
+const slugify = (value = "") => {
+  return value
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "job";
+};
+
+const getDatasetScope = (scope, jobId) => {
+  const baseScope = {
+    job: jobId,
+  };
+
   if (scope === "approved") {
     return {
+      ...baseScope,
       status: "approved",
     };
   }
 
   if (scope === "all") {
     return {
+      ...baseScope,
       status: {
         $in: ACTIVE_DATASET_STATUSES,
       },
@@ -122,6 +144,42 @@ const writeLabelsCsvFiles = (labelsByDirectory) => {
   labelsByDirectory.forEach((rows, directory) => {
     fs.writeFileSync(path.join(directory, "labels.csv"), `${rows.join("\n")}\n`);
   });
+};
+
+const writeClassesFile = (directory, classes = []) => {
+  if (!Array.isArray(classes) || classes.length < 1) {
+    return;
+  }
+
+  fs.writeFileSync(path.join(directory, "classes.txt"), `${classes.join("\n")}\n`);
+};
+
+const toYoloLine = (annotation, classIndexByName) => {
+  const classIndex = classIndexByName[annotation?.className];
+
+  if (classIndex === undefined) {
+    return "";
+  }
+
+  const x = Number(annotation?.x || 0);
+  const y = Number(annotation?.y || 0);
+  const width = Number(annotation?.width || 0);
+  const height = Number(annotation?.height || 0);
+
+  if (width <= 0 || height <= 0) {
+    return "";
+  }
+
+  const centerX = x + width / 2;
+  const centerY = y + height / 2;
+
+  return [
+    classIndex,
+    centerX.toFixed(6),
+    centerY.toFixed(6),
+    width.toFixed(6),
+    height.toFixed(6),
+  ].join(" ");
 };
 
 const zipDirectory = (sourceDirectory, outputPath, totalEntries, onProgress) => {
@@ -189,9 +247,16 @@ const runDatasetExport = async (exportId) => {
       error: "",
     });
 
-    const files = await File.find(getDatasetScope(exportJob.scope))
+    const job = await Job.findById(exportJob.job).select("classes taskType").lean();
+    const classList = Array.isArray(job?.classes) ? job.classes.filter(Boolean) : [];
+    const classIndexByName = classList.reduce((accumulator, className, index) => {
+      accumulator[className] = index;
+      return accumulator;
+    }, {});
+
+    const files = await File.find(getDatasetScope(exportJob.scope, exportJob.job))
       .sort({ _id: 1 })
-      .select("id label status")
+      .select("id label ocrText status taskType annotations")
       .lean();
 
     if (files.length < 1) {
@@ -200,7 +265,9 @@ const runDatasetExport = async (exportId) => {
 
     mkdirp.sync(exportsRoot);
 
-    const archiveFileName = `dataset-${exportJob.scope}-${new Date()
+    const archiveFileName = `dataset-${slugify(exportJob.jobName)}-${getTaskLabel(
+      exportJob.taskType
+    )}-${exportJob.scope}-${new Date()
       .toISOString()
       .replace(/[-:TZ.]/g, "")
       .slice(0, 14)}-${exportId.slice(-8)}.zip`;
@@ -210,6 +277,7 @@ const runDatasetExport = async (exportId) => {
 
     cleanupExportArtifacts(tempDirectory, zipPath);
     mkdirp.sync(tempDirectory);
+    writeClassesFile(tempDirectory, classList);
 
     await updateExport(exportId, {
       status: "copying",
@@ -233,7 +301,7 @@ const runDatasetExport = async (exportId) => {
       mkdirp.sync(destinationDirectory);
       fs.copyFileSync(sourcePath, destinationPath);
 
-      if (file.status === "approved" && file.label) {
+      if (file.status === "approved" && exportJob.taskType === "ocr" && file.label) {
         const fileName = path.parse(destinationPath).name;
         fs.writeFileSync(
           path.join(destinationDirectory, `${fileName}.txt`),
@@ -243,6 +311,34 @@ const runDatasetExport = async (exportId) => {
         const rows = labelsByDirectory.get(destinationDirectory) || [];
         rows.push(`${fileName},${file.label}`);
         labelsByDirectory.set(destinationDirectory, rows);
+      }
+
+      if (
+        file.status === "approved" &&
+        ["detection", "ocr_detection"].includes(exportJob.taskType)
+      ) {
+        const fileName = path.parse(destinationPath).name;
+        const yoloLines = (Array.isArray(file.annotations) ? file.annotations : [])
+          .map((annotation) => toYoloLine(annotation, classIndexByName))
+          .filter(Boolean);
+
+        if (yoloLines.length > 0) {
+          fs.writeFileSync(
+            path.join(destinationDirectory, `${fileName}.txt`),
+            `${yoloLines.join("\n")}\n`
+          );
+        }
+
+        if (exportJob.taskType === "ocr_detection") {
+          const ocrValue = file.ocrText || file.label || "";
+
+          if (ocrValue) {
+            fs.writeFileSync(
+              path.join(destinationDirectory, `${fileName}.ocr.txt`),
+              `${ocrValue}\n`
+            );
+          }
+        }
       }
 
       const processedFiles = index + 1;
@@ -312,10 +408,24 @@ const runDatasetExport = async (exportId) => {
 
 export const startDatasetExport = async (request, response) => {
   const scope = request.body?.scope || "approved";
+  const jobId = request.body?.jobId;
 
-  getDatasetScope(scope);
+  if (!jobId) {
+    throw new Exception("jobId утга оруулах шаардлагатай");
+  }
+
+  getDatasetScope(scope, jobId);
+
+  const job = await Job.findById(jobId).select("_id name taskType").lean();
+
+  if (!job) {
+    throw new Exception("Job олдсонгүй");
+  }
 
   const exportJob = await new DatasetExport({
+    job: job._id,
+    jobName: job.name,
+    taskType: job.taskType || "ocr",
     scope,
     status: "queued",
     progress: 0,
@@ -352,7 +462,9 @@ export const listDatasetExports = async (request, response) => {
       $in: fileNames,
     },
   })
-    .select("_id scope status progress message downloadPath fileName created finishedAt")
+    .select(
+      "_id job jobName taskType scope status progress message downloadPath fileName created finishedAt"
+    )
     .lean();
 
   const exportByFileName = exportJobs.reduce((accumulator, item) => {
@@ -369,6 +481,9 @@ export const listDatasetExports = async (request, response) => {
       return {
         _id: exportJob?._id || null,
         fileName,
+        job: exportJob?.job || null,
+        jobName: exportJob?.jobName || "-",
+        taskType: exportJob?.taskType || "ocr",
         scope: exportJob?.scope || getScopeFromFileName(fileName) || "approved",
         status: exportJob?.status || "finished",
         progress: exportJob?.progress || 100,

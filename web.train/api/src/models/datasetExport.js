@@ -5,6 +5,18 @@ const Name = "datasetExport";
 const Schema = new mongoose.Schema(
   {
     ...AuditFields,
+    job: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "job",
+      index: true,
+    },
+    jobName: { type: String, index: true },
+    taskType: {
+      type: String,
+      index: true,
+      enum: ["ocr", "ocr_detection", "detection"],
+      default: "ocr",
+    },
     scope: {
       type: String,
       index: true,
