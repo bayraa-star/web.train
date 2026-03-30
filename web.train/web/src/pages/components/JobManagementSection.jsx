@@ -9,6 +9,8 @@ import {
 const EMPTY_JOB_FORM = {
   name: "",
   description: "",
+  taskType: "ocr",
+  classes: "",
 };
 
 const formatDateTime = (value) => {
@@ -72,6 +74,8 @@ const JobManagementSection = ({ refreshKey, onChanged }) => {
     setEditForm({
       name: item.name || "",
       description: item.description || "",
+      taskType: item.taskType || "ocr",
+      classes: Array.isArray(item.classes) ? item.classes.join(", ") : "",
     });
   };
 
@@ -98,6 +102,8 @@ const JobManagementSection = ({ refreshKey, onChanged }) => {
         data: {
           name: editForm.name,
           description: editForm.description,
+          taskType: editForm.taskType,
+          classes: editForm.taskType === "ocr" ? [] : editForm.classes,
         },
       });
 
@@ -168,6 +174,8 @@ const JobManagementSection = ({ refreshKey, onChanged }) => {
               <tr className="border-b text-gray-500">
                 <th className="px-3 py-3 font-medium">Job</th>
                 <th className="px-3 py-3 font-medium">Description</th>
+                <th className="px-3 py-3 font-medium">Task</th>
+                <th className="px-3 py-3 font-medium">Classes</th>
                 <th className="px-3 py-3 font-medium">Created</th>
                 <th className="px-3 py-3 font-medium">Action</th>
               </tr>
@@ -193,14 +201,51 @@ const JobManagementSection = ({ refreshKey, onChanged }) => {
                     </td>
                     <td className="px-3 py-3">
                       {isEditing ? (
-                        <input
-                          type="text"
-                          value={editForm.description}
-                          onChange={(event) => updateField("description", event.target.value)}
-                          className="border rounded px-3 py-2"
-                        />
+                        <div className="flex flex-col gap-2">
+                          <input
+                            type="text"
+                            value={editForm.description}
+                            onChange={(event) => updateField("description", event.target.value)}
+                            className="border rounded px-3 py-2"
+                          />
+                        </div>
                       ) : (
                         item.description || "-"
+                      )}
+                    </td>
+                    <td className="px-3 py-3">
+                      {isEditing ? (
+                        <select
+                          value={editForm.taskType}
+                          onChange={(event) => updateField("taskType", event.target.value)}
+                          className="border rounded px-3 py-2"
+                        >
+                          <option value="ocr">OCR</option>
+                          <option value="ocr_detection">OCR + Detection</option>
+                          <option value="detection">Detection</option>
+                        </select>
+                      ) : item.taskType === "ocr_detection" ? (
+                        "OCR + Detection"
+                      ) : item.taskType === "detection" ? (
+                        "Detection"
+                      ) : (
+                        "OCR"
+                      )}
+                    </td>
+                    <td className="px-3 py-3">
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={editForm.classes}
+                          onChange={(event) => updateField("classes", event.target.value)}
+                          placeholder="plate, car, person"
+                          disabled={editForm.taskType === "ocr"}
+                          className="border rounded px-3 py-2 disabled:bg-gray-100"
+                        />
+                      ) : Array.isArray(item.classes) && item.classes.length > 0 ? (
+                        item.classes.join(", ")
+                      ) : (
+                        "-"
                       )}
                     </td>
                     <td className="px-3 py-3 text-gray-500">

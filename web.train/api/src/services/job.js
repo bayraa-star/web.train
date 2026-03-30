@@ -130,6 +130,37 @@ const getJobScope = async (request) => {
   };
 };
 
+const normalizeTaskType = (value = "ocr") => {
+  return ["ocr", "ocr_detection", "detection"].includes(value) ? value : "ocr";
+};
+
+const normalizeClasses = (value) => {
+  if (Array.isArray(value)) {
+    return [...new Set(value.map((item) => item?.toString().trim()).filter(Boolean))];
+  }
+
+  if (typeof value !== "string") {
+    return [];
+  }
+
+  return [
+    ...new Set(
+      value
+        .split(/[\n,]/)
+        .map((item) => item.trim())
+        .filter(Boolean)
+    ),
+  ];
+};
+
+const normalizeJobPayload = (body = {}) => {
+  return {
+    ...body,
+    taskType: normalizeTaskType(body.taskType),
+    classes: normalizeClasses(body.classes),
+  };
+};
+
 export const getAccessibleJobById = (id) => {
   return Job.findOne({
     _id: id,
@@ -141,7 +172,7 @@ export const getJobById = (request) => {
 };
 
 export const addJob = (request) => {
-  const job = new Job(request.body);
+  const job = new Job(normalizeJobPayload(request.body));
 
   return job.save();
 };
@@ -151,7 +182,7 @@ export const updateJobById = (request) => {
     {
       _id: request.params.id,
     },
-    request.body,
+    normalizeJobPayload(request.body),
     { new: true }
   );
 };

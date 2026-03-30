@@ -37,7 +37,13 @@ const server = http.Server(app);
 
 const io = new Server(server, { secure: true, transports: ["websocket"] });
 
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: {
+      policy: "cross-origin",
+    },
+  })
+);
 app.use(urlencoded({ extended: false }));
 app.use(
   json({

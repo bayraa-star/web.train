@@ -14,6 +14,8 @@ const formatBytes = (bytes = 0) => {
 };
 
 const UploadSection = ({ onUploaded, refreshKey }) => {
+  const [newJobTaskType, setNewJobTaskType] = useState("ocr");
+  const [newJobClasses, setNewJobClasses] = useState("plate");
   const [labelers, setLabelers] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [assignedTo, setAssignedTo] = useState("");
@@ -100,6 +102,8 @@ const UploadSection = ({ onUploaded, refreshKey }) => {
         method: "POST",
         data: {
           name,
+          taskType: newJobTaskType,
+          classes: newJobTaskType === "ocr" ? [] : newJobClasses,
         },
       });
 
@@ -109,6 +113,8 @@ const UploadSection = ({ onUploaded, refreshKey }) => {
         setJobs((previous) => [createdJob, ...previous.filter((item) => item._id !== createdJob._id)]);
         setJobId(createdJob._id);
         setNewJobName("");
+        setNewJobTaskType(createdJob?.taskType || "ocr");
+        setNewJobClasses((createdJob?.classes || ["plate"]).join(", "));
         onUploaded && onUploaded();
         await successAlert("action.success", `Job "${createdJob.name}" created successfully.`);
       }
@@ -195,7 +201,13 @@ const UploadSection = ({ onUploaded, refreshKey }) => {
             <option value="">Select job</option>
             {jobs.map((item) => (
               <option key={item._id} value={item._id}>
-                {item.name}
+                {item.name} (
+                {item?.taskType === "ocr_detection"
+                  ? "OCR + Detection"
+                  : item?.taskType === "detection"
+                    ? "Detection"
+                    : "OCR"}
+                )
               </option>
             ))}
           </select>
@@ -207,6 +219,15 @@ const UploadSection = ({ onUploaded, refreshKey }) => {
               placeholder="Create new job, e.g. Batch 2026-03-29"
               className="border rounded px-3 py-2 flex-1"
             />
+            <select
+              value={newJobTaskType}
+              onChange={(event) => setNewJobTaskType(event.target.value)}
+              className="border rounded px-3 py-2"
+            >
+              <option value="ocr">OCR</option>
+              <option value="ocr_detection">OCR + Detection</option>
+              <option value="detection">Detection</option>
+            </select>
             <button
               type="button"
               onClick={createJob}
@@ -216,8 +237,17 @@ const UploadSection = ({ onUploaded, refreshKey }) => {
               {creatingJob ? "Creating..." : "Create Job"}
             </button>
           </div>
+          {newJobTaskType !== "ocr" ? (
+            <input
+              type="text"
+              value={newJobClasses}
+              onChange={(event) => setNewJobClasses(event.target.value)}
+              placeholder="Classes, comma separated. e.g. plate, car, person"
+              className="border rounded px-3 py-2"
+            />
+          ) : null}
           <div className="text-xs text-gray-500">
-            Start a new job when you want a new batch with its own completion rate.
+            Start a new job when you want a new batch with its own completion rate and annotation mode.
           </div>
         </div>
 

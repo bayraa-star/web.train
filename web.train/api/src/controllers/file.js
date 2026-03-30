@@ -19,6 +19,8 @@ const PUBLIC_UPLOADS_DIR = "uploads";
 const uploadsRoot = path.resolve(UPLOADS_ROOT);
 const taskUploadsTempRoot = path.join(uploadsRoot, "tasks", "_tmp");
 const MAX_DATE_SENTINEL = new Date("9999-12-31T23:59:59.999Z");
+const DEFAULT_TASK_TYPE = "ocr";
+const DEFAULT_CLASS_NAME = "plate";
 
 const getFileType = (mimetype = "") => {
   let type = mimetype.split("/")[0];
@@ -31,6 +33,97 @@ const getFileType = (mimetype = "") => {
   }
 
   return type;
+};
+
+const normalizeTaskType = (value = DEFAULT_TASK_TYPE) => {
+  return ["ocr", "ocr_detection", "detection"].includes(value)
+    ? value
+    : DEFAULT_TASK_TYPE;
+};
+
+const normalizeOcrText = (value) => {
+  return typeof value === "string" ? value.trim().toUpperCase() : "";
+};
+
+const clampNormalized = (value) => {
+  const next = Number(value);
+
+  if (!Number.isFinite(next)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.min(next, 1));
+};
+
+const normalizeAnnotations = (annotations, userId) => {
+  if (!Array.isArray(annotations)) {
+    return [];
+  }
+
+  return annotations
+    .map((annotation, index) => {
+      const x = clampNormalized(annotation?.x);
+      const y = clampNormalized(annotation?.y);
+      const width = clampNormalized(annotation?.width);
+      const height = clampNormalized(annotation?.height);
+
+      if (width <= 0 || height <= 0) {
+        return null;
+      }
+
+      const boundedWidth = Math.min(width, 1 - x);
+      const boundedHeight = Math.min(height, 1 - y);
+
+      if (boundedWidth <= 0 || boundedHeight <= 0) {
+        return null;
+      }
+
+      return {
+        id:
+          typeof annotation?.id === "string" && annotation.id.trim()
+            ? annotation.id.trim()
+            : uuid(),
+        className:
+          typeof annotation?.className === "string" && annotation.className.trim()
+            ? annotation.className.trim()
+            : DEFAULT_CLASS_NAME,
+        x,
+        y,
+        width: boundedWidth,
+        height: boundedHeight,
+        createdAt: annotation?.createdAt ? new Date(annotation.createdAt) : new Date(),
+        createdBy: annotation?.createdBy || userId || null,
+      };
+    })
+    .filter(Boolean);
+};
+
+const normalizeImageMeta = (imageMeta) => {
+  const width = Number(imageMeta?.width || 0);
+  const height = Number(imageMeta?.height || 0);
+
+  return {
+    width: Number.isFinite(width) && width > 0 ? Math.round(width) : 0,
+    height: Number.isFinite(height) && height > 0 ? Math.round(height) : 0,
+  };
+};
+
+const taskRequiresOcr = (taskType) => {
+  return ["ocr", "ocr_detection"].includes(normalizeTaskType(taskType));
+};
+
+const taskRequiresDetection = (taskType) => {
+  return ["ocr_detection", "detection"].includes(normalizeTaskType(taskType));
+};
+
+const validateTaskPayload = ({ taskType, ocrText, annotations }) => {
+  if (taskRequiresOcr(taskType) && !ocrText) {
+    throw new Exception("OCR text is required");
+  }
+
+  if (taskRequiresDetection(taskType) && (!annotations || annotations.length < 1)) {
+    throw new Exception("At least one bounding box is required");
+  }
 };
 
 const sanitizeDirectorySegment = (value = "") => {
@@ -202,13 +295,22 @@ const taskFsMultiUpload = multer({
 const fileProcessor = async (file, request) => {
   const { user, assignedLabeler, assignedJob } = request;
   const upload = serializeUpload(file);
+  const taskType = normalizeTaskType(assignedJob?.taskType);
 
   return new File({
     job: assignedJob?._id,
+    taskType,
     assignedTo: assignedLabeler._id,
     created: new Date(),
     createdby: user?.id,
     status: "uploaded",
+    label: "",
+    ocrText: "",
+    annotations: [],
+    imageMeta: {
+      width: 0,
+      height: 0,
+    },
     approvedBy: null,
     approvedAt: null,
     declinedBy: null,
@@ -243,6 +345,30 @@ const syncLabelArtifacts = (fileId, label) => {
   rows.push(`${fileName},${label}`);
 
   fs.writeFileSync(csvPath, `${rows.join("\n")}\n`);
+};
+
+const applyAnnotationPayloadToFile = (file, request) => {
+  const taskType = normalizeTaskType(file.taskType);
+  const ocrText = normalizeOcrText(
+    request.body?.ocrText ?? request.body?.label ?? file.ocrText ?? file.label
+  );
+  const annotations = normalizeAnnotations(
+    request.body?.annotations ?? file.annotations,
+    request.user?.id
+  );
+  const imageMeta = normalizeImageMeta(request.body?.imageMeta ?? file.imageMeta);
+
+  validateTaskPayload({
+    taskType,
+    ocrText,
+    annotations,
+  });
+
+  file.taskType = taskType;
+  file.ocrText = ocrText;
+  file.label = ocrText;
+  file.annotations = annotations;
+  file.imageMeta = imageMeta;
 };
 
 const removeLabelArtifacts = (fileId) => {
@@ -554,14 +680,6 @@ export const progressFiles = async (request, response) => {
 };
 
 export const labelFile = async (request, response) => {
-  const rawLabel = request.body?.label;
-  const label =
-    typeof rawLabel === "string" ? rawLabel.trim().toUpperCase() : "";
-
-  if (!label) {
-    throw new Exception("label утга оруулах шаардлагатай");
-  }
-
   const file = await getAccessibleFileById(request.params.id, request.user);
 
   if (!["uploaded", "labeled"].includes(file.status)) {
@@ -569,7 +687,7 @@ export const labelFile = async (request, response) => {
   }
 
   file.root = null;
-  file.label = label;
+  applyAnnotationPayloadToFile(file, request);
   file.status = "labeled";
   file.labeledBy = request.user?.id;
   file.labeledAt = new Date();
@@ -602,14 +720,6 @@ export const labelFile = async (request, response) => {
 };
 
 export const approveFile = async (request, response) => {
-  const rawLabel = request.body?.label;
-  const label =
-    typeof rawLabel === "string" ? rawLabel.trim().toUpperCase() : "";
-
-  if (!label) {
-    throw new Exception("label утга оруулах шаардлагатай");
-  }
-
   const file = await getAccessibleFileById(request.params.id, request.user);
 
   if (file.status !== "labeled") {
@@ -617,7 +727,7 @@ export const approveFile = async (request, response) => {
   }
 
   file.root = null;
-  file.label = label;
+  applyAnnotationPayloadToFile(file, request);
   file.status = "approved";
   file.approvedBy = request.user?.id;
   file.approvedAt = new Date();
@@ -629,7 +739,12 @@ export const approveFile = async (request, response) => {
   file.modifiedby = request.user?.id;
 
   await file.save();
-  syncLabelArtifacts(file.id, label);
+
+  if (taskRequiresOcr(file.taskType) && file.ocrText) {
+    syncLabelArtifacts(file.id, file.ocrText);
+  } else {
+    removeLabelArtifacts(file.id);
+  }
 
   return response.json(
     await File.findById(file._id)
@@ -654,13 +769,16 @@ export const declineFile = async (request, response) => {
     throw new Exception("Pending labeled image not found");
   }
 
-  const rawLabel = request.body?.label;
-  const label =
-    typeof rawLabel === "string" && rawLabel.trim()
-      ? rawLabel.trim().toUpperCase()
-      : file.label || "";
-
-  file.label = label;
+  const fallbackAnnotations = Array.isArray(file.annotations) ? file.annotations : [];
+  file.ocrText = normalizeOcrText(
+    request.body?.ocrText ?? request.body?.label ?? file.ocrText ?? file.label
+  );
+  file.label = file.ocrText;
+  file.annotations = normalizeAnnotations(
+    request.body?.annotations ?? fallbackAnnotations,
+    file.labeledBy || request.user?.id
+  );
+  file.imageMeta = normalizeImageMeta(request.body?.imageMeta ?? file.imageMeta);
   file.status = "uploaded";
   file.approvedBy = null;
   file.approvedAt = null;
