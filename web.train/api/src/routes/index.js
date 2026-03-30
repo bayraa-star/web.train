@@ -4,4 +4,14 @@ import FileRouter from "./file";
 import RootRouter from "./root";
 import JobRouter from "./job";
 import DatasetRouter from "./dataset";
-export { UserRouter, LogRouter, FileRouter, RootRouter, JobRouter, DatasetRouter };
+import SystemMonitorRouter from "./systemMonitor";
+
+export {
+  UserRouter,
+  LogRouter,
+  FileRouter,
+  RootRouter,
+  JobRouter,
+  DatasetRouter,
+  SystemMonitorRouter,
+};

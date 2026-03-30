@@ -28,6 +28,7 @@ import {
   RootRouter,
   JobRouter,
   DatasetRouter,
+  SystemMonitorRouter,
 } from "./routes";
 import agenda from "./utils/agenda";
 
@@ -81,6 +82,7 @@ app.use("/file", FileRouter);
 app.use("/root", RootRouter);
 app.use("/job", JobRouter);
 app.use("/dataset", DatasetRouter);
+app.use("/system-monitor", SystemMonitorRouter);
 
 app.use("/test", (req, res) => {
   let total = 0;
